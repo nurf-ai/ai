@@ -3,7 +3,11 @@ package ai
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
 
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
@@ -12,6 +16,7 @@ import (
 // OpenAIImageProvider implements ImageProvider using the OpenAI images API.
 type OpenAIImageProvider struct {
 	raw          *openai.Client
+	apiKey       string
 	defaultModel string
 	moderation   ModerationProvider
 	meter        MeterHook
@@ -29,7 +34,7 @@ func newOpenAIImageProvider(apiKey, model string) *OpenAIImageProvider {
 	if model == "" {
 		model = openai.CreateImageModelGptImage1
 	}
-	return &OpenAIImageProvider{raw: openai.NewClient(apiKey), defaultModel: model}
+	return &OpenAIImageProvider{raw: openai.NewClient(apiKey), apiKey: apiKey, defaultModel: model}
 }
 
 func (p *OpenAIImageProvider) Generate(ctx context.Context, prompt, model, size string) (string, error) {
@@ -88,19 +93,32 @@ func (p *OpenAIImageProvider) Edit(ctx context.Context, image []byte, editPrompt
 	if len(image) == 0 {
 		return p.Generate(ctx, editPrompt, "", "")
 	}
-	resp, err := p.raw.CreateEditImage(ctx, openai.ImageEditRequest{
-		Image:          bytes.NewReader(image),
-		Prompt:         editPrompt,
-		Model:          p.defaultModel,
-		N:              1,
-		Size:           openai.CreateImageSize1024x1024,
-		ResponseFormat: "b64_json",
-	})
-	if err != nil {
-		return "", fmt.Errorf("openai image edit: %w", err)
-	}
-	if len(resp.Data) == 0 {
-		return "", fmt.Errorf("openai image edit: no data returned")
+	var b64 string
+	if p.defaultModel == openai.CreateImageModelGptImage1 {
+		// gpt-image-1 rejects the response_format param that the library sends
+		// unconditionally, so we make a direct multipart request.
+		var err error
+		b64, err = p.editDirect(ctx, image, editPrompt)
+		if err != nil {
+			return "", fmt.Errorf("openai image edit: %w", err)
+		}
+	} else {
+		req := openai.ImageEditRequest{
+			Image:          bytes.NewReader(image),
+			Prompt:         editPrompt,
+			Model:          p.defaultModel,
+			N:              1,
+			Size:           openai.CreateImageSize1024x1024,
+			ResponseFormat: "b64_json",
+		}
+		resp, err := p.raw.CreateEditImage(ctx, req)
+		if err != nil {
+			return "", fmt.Errorf("openai image edit: %w", err)
+		}
+		if len(resp.Data) == 0 {
+			return "", fmt.Errorf("openai image edit: no data returned")
+		}
+		b64 = resp.Data[0].B64JSON
 	}
 	if p.meter != nil {
 		p.meter(UsageEvent{
@@ -112,7 +130,57 @@ func (p *OpenAIImageProvider) Edit(ctx context.Context, image []byte, editPrompt
 			Metadata:         map[string]any{"type": "image_edit"},
 		})
 	}
-	return resp.Data[0].B64JSON, nil
+	return b64, nil
+}
+
+func (p *OpenAIImageProvider) editDirect(ctx context.Context, image []byte, prompt string) (string, error) {
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	fw, err := w.CreatePart(textproto.MIMEHeader{
+		"Content-Disposition": {`form-data; name="image[]"; filename="image.png"`},
+		"Content-Type":        {"image/png"},
+	})
+	if err != nil {
+		return "", err
+	}
+	if _, err := fw.Write(image); err != nil {
+		return "", err
+	}
+	_ = w.WriteField("prompt", prompt)
+	_ = w.WriteField("model", p.defaultModel)
+	_ = w.WriteField("n", "1")
+	_ = w.WriteField("size", openai.CreateImageSize1024x1024)
+	if err := w.Close(); err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/images/edits", &body)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	var result struct {
+		Data  []struct{ B64JSON string `json:"b64_json"` } `json:"data"`
+		Error *struct{ Message string `json:"message"` }   `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decode response: %w", err)
+	}
+	if result.Error != nil {
+		return "", fmt.Errorf("status %d: %s", resp.StatusCode, result.Error.Message)
+	}
+	if len(result.Data) == 0 || result.Data[0].B64JSON == "" {
+		return "", fmt.Errorf("no image data in response")
+	}
+	return result.Data[0].B64JSON, nil
 }
 
 func (p *OpenAIImageProvider) EditWithReference(ctx context.Context, image []byte, reference []byte, editPrompt string) (string, error) {

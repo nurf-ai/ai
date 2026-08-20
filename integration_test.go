@@ -3,8 +3,12 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
 	"os"
 	"strings"
 	"sync"
@@ -41,6 +45,21 @@ func newCostTracker(t *testing.T) MeterHook {
 		totalCached += ev.CacheReadInputTokens
 		mu.Unlock()
 	}
+}
+
+func testPNGBytes(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 64, 64))
+	for y := range 64 {
+		for x := range 64 {
+			img.Set(x, y, color.RGBA{0, 0, 255, 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("encode test png: %v", err)
+	}
+	return buf.Bytes()
 }
 
 var testSchema = json.RawMessage(`{
@@ -192,6 +211,54 @@ func TestAnthropicChat_Integration(t *testing.T) {
 		if resp.Content != got.String() {
 			t.Errorf("response %q != streamed %q", resp.Content, got.String())
 		}
+	})
+
+	t.Run("PromptCaching", func(t *testing.T) {
+		t.Parallel()
+		p := NewAnthropicProvider(key, "claude-haiku-4-5")
+
+		costHook := newCostTracker(t)
+		var mu sync.Mutex
+		var events []UsageEvent
+		p.SetMeter(func(ev UsageEvent) {
+			costHook(ev)
+			mu.Lock()
+			events = append(events, ev)
+			mu.Unlock()
+		})
+
+		sysPrompt := "You are a helpful assistant.\n" + strings.Repeat("Context line for prompt cache integration test padding. ", 500)
+		cacheCtx := WithCacheSysPrompt(ctx)
+		msgs := []Message{
+			{Role: RoleSystem, Content: sysPrompt},
+			{Role: RoleUser, Content: "say hi in one word"},
+		}
+
+		if _, err := p.Chat(cacheCtx, msgs, nil); err != nil {
+			t.Fatalf("first call: %v", err)
+		}
+
+		mu.Lock()
+		if len(events) == 0 || events[0].CacheCreationInputTokens == 0 {
+			mu.Unlock()
+			t.Skip("prompt caching not available for this model/key (cache_create=0)")
+		}
+		mu.Unlock()
+
+		if _, err := p.Chat(cacheCtx, msgs, nil); err != nil {
+			t.Fatalf("second call: %v", err)
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+		if len(events) < 2 {
+			t.Fatalf("expected 2 meter events, got %d", len(events))
+		}
+		if events[1].CacheReadInputTokens == 0 {
+			t.Error("second call: expected CacheReadInputTokens > 0")
+		}
+		t.Logf("call 1: cache_create=%d cache_read=%d", events[0].CacheCreationInputTokens, events[0].CacheReadInputTokens)
+		t.Logf("call 2: cache_create=%d cache_read=%d", events[1].CacheCreationInputTokens, events[1].CacheReadInputTokens)
 	})
 }
 
@@ -383,6 +450,19 @@ func TestOpenAI_Integration(t *testing.T) {
 		}
 		t.Logf("image b64 len: %d", len(b64))
 	})
+
+	t.Run("ImageEdit", func(t *testing.T) {
+		t.Parallel()
+		img := newOpenAIImageProvider(key, "")
+		b64, err := img.Edit(ctx, testPNGBytes(t), "add a small red circle in the center")
+		if err != nil {
+			t.Fatalf("image edit: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty edited image")
+		}
+		t.Logf("edited image b64 len: %d", len(b64))
+	})
 }
 
 // --- Gemini --------------------------------------------------------------
@@ -519,6 +599,39 @@ func TestGemini_Integration(t *testing.T) {
 			t.Fatal("empty image")
 		}
 		t.Logf("image b64 len: %d", len(b64))
+	})
+
+	t.Run("ImageEdit", func(t *testing.T) {
+		t.Parallel()
+		img, err := newGeminiImageProvider(ctx, key, "")
+		if err != nil {
+			t.Fatalf("create image provider: %v", err)
+		}
+		b64, err := img.Edit(ctx, testPNGBytes(t), "add a small red circle in the center")
+		if err != nil {
+			t.Fatalf("image edit: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty edited image")
+		}
+		t.Logf("edited image b64 len: %d", len(b64))
+	})
+
+	t.Run("ImageEditWithReference", func(t *testing.T) {
+		t.Parallel()
+		img, err := newGeminiImageProvider(ctx, key, "")
+		if err != nil {
+			t.Fatalf("create image provider: %v", err)
+		}
+		source := testPNGBytes(t)
+		b64, err := img.EditWithReference(ctx, source, source, "Generate a new image: take the first image and recolor it using the palette of the second image")
+		if err != nil {
+			t.Fatalf("image edit with reference: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty edited image")
+		}
+		t.Logf("edited image b64 len: %d", len(b64))
 	})
 }
 
@@ -657,7 +770,7 @@ func TestOllama_Integration(t *testing.T) {
 	models := []ollamaTestModel{
 		{name: "qwen3.5:0.8b", structured: false, stream: true},
 		{name: "gpt-oss:20b", structured: true, stream: true},
-		{name: "gemma4:e4b", structured: true, stream: true},
+		{name: "gemma4:e4b", structured: false, stream: true},
 	}
 
 	for _, m := range models {

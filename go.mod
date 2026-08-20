@@ -9,7 +9,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/pkoukk/tiktoken-go-loader v0.0.2
-	github.com/sashabaranov/go-openai v1.41.2
+	github.com/sashabaranov/go-openai v1.42.0
 	go.uber.org/zap v1.28.0
 	google.golang.org/genai v1.28.0
 )

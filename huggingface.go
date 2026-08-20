@@ -154,7 +154,7 @@ func (p *HuggingFaceProvider) CreateStructuredOutputFromSchema(ctx context.Conte
 			Type:     openai.ToolTypeFunction,
 			Function: openai.ToolFunction{Name: "structured_output"},
 		},
-		MaxTokens: 4096,
+		MaxCompletionTokens: 4096,
 	}
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
@@ -289,7 +289,7 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 	req := openai.ChatCompletionRequest{
 		Model:     p.model,
 		Messages:  apiMessages,
-		MaxTokens: 4096,
+		MaxCompletionTokens: 4096,
 	}
 	if len(apiTools) > 0 {
 		req.Tools = apiTools
@@ -387,7 +387,7 @@ func (p *HuggingFaceProvider) ChatStream(ctx context.Context, messages []Message
 		apiTools = append(apiTools, openai.Tool{Type: openai.ToolTypeFunction, Function: &openai.FunctionDefinition{Name: t.Name, Description: t.Description, Parameters: t.Parameters}})
 	}
 
-	req := openai.ChatCompletionRequest{Model: p.model, Messages: apiMessages, MaxTokens: 4096}
+	req := openai.ChatCompletionRequest{Model: p.model, Messages: apiMessages, MaxCompletionTokens: 4096}
 	if len(apiTools) > 0 {
 		req.Tools = apiTools
 	}

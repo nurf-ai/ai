@@ -189,22 +189,22 @@ Integration test coverage per provider:
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen |
-|----------|-------|:----:|:------:|:---------:|:-----------------:|:-----------:|:-----:|:----------:|:---:|:----------:|:---------:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | ✓ | | | | | | |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen | Img Edit | Img Edit Ref | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | ✓ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | |
 
 <!-- testmatrix:end -->
 

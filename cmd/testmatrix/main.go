@@ -49,6 +49,9 @@ var columns = []column{
 	{"STT", "STT"},
 	{"Moderation", "Moderation"},
 	{"Image Gen", "ImageGenerate"},
+	{"Img Edit", "ImageEdit"},
+	{"Img Edit Ref", "ImageEditWithReference"},
+	{"Caching", "PromptCaching"},
 }
 
 var leafSubtests = func() map[string]bool {
@@ -77,6 +80,7 @@ var chatReasonCaps = map[string]bool{
 	"Chat": true, "Stream": true, "StreamWithChan": true,
 	"Reasoning": true, "StructuredOutput": true,
 	"StructuredOutputFromSchema": true, "ChatWithTools": true,
+	"PromptCaching": true,
 }
 
 var rows = []row{
@@ -86,9 +90,9 @@ var rows = []row{
 	{"OpenAI", "text-embedding-3-small", "TestOpenAI_Integration", map[string]bool{"Embeddings": true}},
 	{"OpenAI", "whisper-1", "TestOpenAI_Integration", map[string]bool{"STT": true}},
 	{"OpenAI", "omni-moderation-latest", "TestOpenAI_Integration", map[string]bool{"Moderation": true}},
-	{"OpenAI", "gpt-image-1", "TestOpenAI_Integration", map[string]bool{"ImageGenerate": true}},
+	{"OpenAI", "gpt-image-1", "TestOpenAI_Integration", map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
 	{"Gemini", "gemini-3.6-flash", "TestGemini_Integration", chatCaps},
-	{"Gemini", "gemini-2.5-flash-image", "TestGemini_Integration", map[string]bool{"ImageGenerate": true}},
+	{"Gemini", "gemini-2.5-flash-image", "TestGemini_Integration", map[string]bool{"ImageGenerate": true, "ImageEdit": true, "ImageEditWithReference": true}},
 	{"Hugging Face", "Kimi-K2-Instruct", "TestHuggingFace_Integration/moonshotai/Kimi-K2-Instruct-0905", nil},
 	{"Hugging Face", "Kimi-K3", "TestHuggingFace_Integration/moonshotai/Kimi-K3", nil},
 	{"Ollama", "qwen3.5:0.8b", "TestOllama_Integration/qwen3.5:0.8b", nil},
