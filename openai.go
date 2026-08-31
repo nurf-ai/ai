@@ -144,22 +144,31 @@ func (p *OpenAIProvider) CreateStructuredOutputBreakpointed(
 }
 
 func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
-	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
+	return p.CreateStructuredOutputFromParts(ctx, []Part{TextPart{Text: userPrompt}}, sysPrompt, schema)
+}
+
+// CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
+// multimodal user turn (text + base64 images). Honours WithMaxTokens
+// (default 4096) and forces the structured_output tool so the model cannot
+// answer in prose.
+func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	userText, _ := PartsText(parts)
+	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
 	}
-	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "openai"), zap.String("model", p.model))
+	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "openai"), zap.String("model", p.model), zap.Int("parts", len(parts)))
 
 	var schemaObj map[string]any
 	if err := json.Unmarshal(schema, &schemaObj); err != nil {
 		return nil, fmt.Errorf("invalid schema JSON: %w", err)
 	}
 
-	// Use function calling with the raw schema
+	maxOut := MaxTokensFromCtx(ctx, 4096)
 	req := openai.ChatCompletionRequest{
 		Model: p.model,
 		Messages: []openai.ChatCompletionMessage{
 			{Role: openai.ChatMessageRoleSystem, Content: sysPrompt},
-			{Role: openai.ChatMessageRoleUser, Content: userPrompt},
+			openaiUserMessageFromParts(parts),
 		},
 		Tools: []openai.Tool{
 			{
@@ -171,7 +180,11 @@ func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 				},
 			},
 		},
-		MaxCompletionTokens: 4096,
+		ToolChoice: openai.ToolChoice{
+			Type:     openai.ToolTypeFunction,
+			Function: openai.ToolFunction{Name: "structured_output"},
+		},
+		MaxCompletionTokens: maxOut,
 	}
 	if isReasoningModel(p.model) {
 		req.ReasoningEffort = "none"
@@ -181,18 +194,26 @@ func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 	if err != nil {
 		return nil, fmt.Errorf("openai function call failed: %w", err)
 	}
-	p.emitUsage(ctx, completion.Usage, sysPrompt, userPrompt)
+	p.emitUsage(ctx, completion.Usage, sysPrompt, userText)
 
 	if len(completion.Choices) == 0 {
 		return nil, fmt.Errorf("openai: no choices returned")
 	}
 
 	choice := completion.Choices[0]
+	if choice.FinishReason == openai.FinishReasonLength {
+		return nil, fmt.Errorf("structured output truncated at max_completion_tokens=%d (finish_reason=length): shrink the schema/output or raise the budget with ai.WithMaxTokens", maxOut)
+	}
+	if choice.FinishReason == openai.FinishReasonContentFilter {
+		// also fires when the model starts reproducing well-known text verbatim (regurgitation guard)
+		return nil, fmt.Errorf("structured output stopped by the provider content filter after %d tokens (finish_reason=content_filter): ask for paraphrases instead of verbatim quotes", completion.Usage.CompletionTokens)
+	}
 	for _, tc := range choice.Message.ToolCalls {
 		if tc.Function.Name == "structured_output" {
 			var result map[string]any
 			if err := json.Unmarshal([]byte(tc.Function.Arguments), &result); err != nil {
-				return nil, fmt.Errorf("unmarshal function args: %w", err)
+				return nil, fmt.Errorf("unmarshal function args (finish_reason=%s, args_len=%d, completion_tokens=%d): %w",
+					choice.FinishReason, len(tc.Function.Arguments), completion.Usage.CompletionTokens, err)
 			}
 			return result, nil
 		}
@@ -200,6 +221,30 @@ func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 
 	return nil, fmt.Errorf("no structured output in response (finish_reason=%s, tool_calls=%d, content=%q)",
 		choice.FinishReason, len(choice.Message.ToolCalls), truncate(strings.TrimSpace(choice.Message.Content), 200))
+}
+
+// openaiUserMessageFromParts builds one user message from a multimodal turn.
+// Text-only turns keep the plain Content form — Content and MultiContent are
+// mutually exclusive on the wire, and some OpenAI-compatible hosts reject an
+// all-text MultiContent array.
+func openaiUserMessageFromParts(parts []Part) openai.ChatCompletionMessage {
+	text, hasImage := PartsText(parts)
+	if !hasImage {
+		return openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, Content: text}
+	}
+	mc := make([]openai.ChatMessagePart, 0, len(parts))
+	for _, p := range parts {
+		switch v := p.(type) {
+		case ImagePart:
+			mc = append(mc, openai.ChatMessagePart{
+				Type:     openai.ChatMessagePartTypeImageURL,
+				ImageURL: &openai.ChatMessageImageURL{URL: "data:" + v.MediaType + ";base64," + v.Data},
+			})
+		case TextPart:
+			mc = append(mc, openai.ChatMessagePart{Type: openai.ChatMessagePartTypeText, Text: v.Text})
+		}
+	}
+	return openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, MultiContent: mc}
 }
 
 func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {

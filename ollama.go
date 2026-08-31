@@ -101,20 +101,32 @@ func (p *OllamaProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 }
 
 func (p *OllamaProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
-	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
+	return p.CreateStructuredOutputFromParts(ctx, []Part{TextPart{Text: userPrompt}}, sysPrompt, schema)
+}
+
+// CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
+// multimodal user turn. Ollama models don't always honour tool calling, so
+// the schema is prompted for directly; images ride along as chat parts for
+// vision-capable models.
+func (p *OllamaProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	userText, hasImage := PartsText(parts)
+	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
 	}
-	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "ollama"), zap.String("model", p.model))
+	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "ollama"), zap.String("model", p.model), zap.Int("parts", len(parts)))
 
-	// Ollama models don't always honour tool calling, so prompt for JSON directly.
 	jsonPrompt := fmt.Sprintf(
 		"%s\n\nRespond with ONLY valid JSON matching this schema:\n%s",
 		sysPrompt, string(schema),
 	)
 
+	user := Message{Role: RoleUser, Content: userText}
+	if hasImage {
+		user = Message{Role: RoleUser, Parts: parts}
+	}
 	resp, err := p.Chat(ctx, []Message{
 		{Role: RoleSystem, Content: jsonPrompt},
-		{Role: RoleUser, Content: userPrompt},
+		user,
 	}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ollama schema output: %w", err)

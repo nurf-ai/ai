@@ -15,12 +15,15 @@ Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
 | `gemini_image_provider.go` | Gemini image generation |
 | `openai_image_provider.go` | OpenAI image generation/editing |
 | `openai_stt_provider.go` | OpenAI speech-to-text |
+| `fal.go` | fal.ai queue client (`FalClient`: submit / status / result / cancel / run) |
+| `fal_video_provider.go` | fal video generation (LTX-2.3 image/text-to-video) |
+| `video_provider.go` | `VideoProvider` interface, `VideoRequest` / `VideoResult`, `DataURI` |
 | `openai_moderation_provider.go` | OpenAI content moderation |
 | `image_provider.go` | `ImageProvider` interface |
 | `stt_provider.go` | `STTProvider` interface |
 | `moderation_provider.go` | `ModerationProvider` interface |
 | `meter.go` | Usage metering hooks, prompt block attribution |
-| `pricing.go` | Cost estimation + context window lookup, loads `models.json` via `go:embed` |
+| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`) + context window lookup, loads `models.json` via `go:embed` |
 | `models.json` | Per-model pricing + context windows (single source of truth) |
 | `model_limits.go` | `MaxInputTokensLLM` helper, token counting |
 | `provider.go` | Provider registry, `NewLLMProvider` factory |

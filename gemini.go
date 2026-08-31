@@ -95,10 +95,17 @@ func (p *GeminiProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 }
 
 func (p *GeminiProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
-	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
+	return p.CreateStructuredOutputFromParts(ctx, []Part{TextPart{Text: userPrompt}}, sysPrompt, schema)
+}
+
+// CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
+// multimodal user turn (text + base64 images).
+func (p *GeminiProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	userText, _ := PartsText(parts)
+	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
 	}
-	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "gemini"), zap.String("model", p.model))
+	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "gemini"), zap.String("model", p.model), zap.Int("parts", len(parts)))
 
 	config := &genai.GenerateContentConfig{
 		ResponseMIMEType:   "application/json",
@@ -109,14 +116,12 @@ func (p *GeminiProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 		config.SystemInstruction = genai.NewContentFromText(sysPrompt, genai.RoleUser)
 	}
 
-	contents := []*genai.Content{
-		genai.NewContentFromText(userPrompt, genai.RoleUser),
-	}
+	contents := []*genai.Content{{Parts: geminiPartsFromParts(parts), Role: "user"}}
 	resp, err := p.client.Models.GenerateContent(ctx, p.model, contents, config)
 	if err != nil {
 		return nil, fmt.Errorf("gemini structured output from schema: %w", err)
 	}
-	p.emitUsage(ctx, resp, sysPrompt, userPrompt)
+	p.emitUsage(ctx, resp, sysPrompt, userText)
 
 	text := extractGeminiText(resp)
 	if text == "" {
@@ -127,6 +132,25 @@ func (p *GeminiProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 		return nil, fmt.Errorf("gemini unmarshal schema output: %w", err)
 	}
 	return result, nil
+}
+
+// geminiPartsFromParts converts a multimodal turn into genai parts. ImagePart
+// carries base64 text while genai.Blob wants raw bytes (the SDK encodes on the
+// wire), so the image is decoded here.
+func geminiPartsFromParts(parts []Part) []*genai.Part {
+	out := make([]*genai.Part, 0, len(parts))
+	for _, p := range parts {
+		switch v := p.(type) {
+		case ImagePart:
+			out = append(out, &genai.Part{InlineData: &genai.Blob{MIMEType: v.MediaType, Data: imagePartBytes(v)}})
+		case TextPart:
+			out = append(out, genai.NewPartFromText(v.Text))
+		}
+	}
+	if len(out) == 0 {
+		out = append(out, genai.NewPartFromText(""))
+	}
+	return out
 }
 
 func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
@@ -162,7 +186,7 @@ func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []T
 						parts = append(parts, &genai.Part{
 							InlineData: &genai.Blob{
 								MIMEType: v.MediaType,
-								Data:     []byte(v.Data),
+								Data:     imagePartBytes(v),
 							},
 						})
 					case TextPart:
@@ -290,7 +314,7 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 				for _, p := range m.Parts {
 					switch v := p.(type) {
 					case ImagePart:
-						parts = append(parts, &genai.Part{InlineData: &genai.Blob{MIMEType: v.MediaType, Data: []byte(v.Data)}})
+						parts = append(parts, &genai.Part{InlineData: &genai.Blob{MIMEType: v.MediaType, Data: imagePartBytes(v)}})
 					case TextPart:
 						parts = append(parts, genai.NewPartFromText(v.Text))
 					}

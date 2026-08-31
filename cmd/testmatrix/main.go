@@ -51,6 +51,7 @@ var columns = []column{
 	{"Image Gen", "ImageGenerate"},
 	{"Img Edit", "ImageEdit"},
 	{"Img Edit Ref", "ImageEditWithReference"},
+	{"Video Gen", "VideoGenerate"},
 	{"Caching", "PromptCaching"},
 }
 
@@ -98,6 +99,7 @@ var rows = []row{
 	{"Ollama", "qwen3.5:0.8b", "TestOllama_Integration/qwen3.5:0.8b", nil},
 	{"Ollama", "gpt-oss:20b", "TestOllama_Integration/gpt-oss:20b", nil},
 	{"Ollama", "gemma4:e4b", "TestOllama_Integration/gemma4:e4b", nil},
+	{"fal", "ltx-2.3/image-to-video/fast", "TestFal_Integration", map[string]bool{"VideoGenerate": true}},
 }
 
 var parentToProvider = map[string]string{
@@ -106,6 +108,7 @@ var parentToProvider = map[string]string{
 	"TestGemini_Integration":        "Gemini",
 	"TestHuggingFace_Integration":   "HuggingFace",
 	"TestOllama_Integration":        "Ollama",
+	"TestFal_Integration":           "fal",
 }
 
 func shortLabel(test string) string {

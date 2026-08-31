@@ -14,7 +14,7 @@ import (
 // declares max_input_tokens. Catches entries where the field was omitted.
 func TestPricingCoverage(t *testing.T) {
 	for model, p := range pricingTable {
-		if p.FlatPerImage > 0 || stripDateSuffix(model) != model {
+		if p.FlatPerImage > 0 || p.PerVideoSecond > 0 || stripDateSuffix(model) != model {
 			continue
 		}
 		if p.MaxInputTokens == 0 {

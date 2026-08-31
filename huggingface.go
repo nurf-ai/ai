@@ -124,21 +124,29 @@ func (p *HuggingFaceProvider) CreateStructuredOutput(ctx context.Context, userPr
 }
 
 func (p *HuggingFaceProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
-	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
+	return p.CreateStructuredOutputFromParts(ctx, []Part{TextPart{Text: userPrompt}}, sysPrompt, schema)
+}
+
+// CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
+// multimodal user turn (text + base64 images).
+func (p *HuggingFaceProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	userText, _ := PartsText(parts)
+	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
 	}
-	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "huggingface"), zap.String("model", p.model))
+	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "huggingface"), zap.String("model", p.model), zap.Int("parts", len(parts)))
 
 	var schemaObj map[string]any
 	if err := json.Unmarshal(schema, &schemaObj); err != nil {
 		return nil, fmt.Errorf("invalid schema JSON: %w", err)
 	}
 
+	maxOut := MaxTokensFromCtx(ctx, 4096)
 	req := openai.ChatCompletionRequest{
 		Model: p.model,
 		Messages: []openai.ChatCompletionMessage{
 			{Role: openai.ChatMessageRoleSystem, Content: sysPrompt},
-			{Role: openai.ChatMessageRoleUser, Content: userPrompt},
+			openaiUserMessageFromParts(parts),
 		},
 		Tools: []openai.Tool{
 			{
@@ -154,26 +162,34 @@ func (p *HuggingFaceProvider) CreateStructuredOutputFromSchema(ctx context.Conte
 			Type:     openai.ToolTypeFunction,
 			Function: openai.ToolFunction{Name: "structured_output"},
 		},
-		MaxCompletionTokens: 4096,
+		MaxCompletionTokens: maxOut,
 	}
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("huggingface function call failed: %w", err)
 	}
-	p.emitUsage(ctx, completion.Usage, sysPrompt, userPrompt)
+	p.emitUsage(ctx, completion.Usage, sysPrompt, userText)
 
 	if len(completion.Choices) == 0 {
 		return nil, fmt.Errorf("huggingface: no choices returned")
 	}
 
 	choice := completion.Choices[0]
+	if choice.FinishReason == openai.FinishReasonLength {
+		return nil, fmt.Errorf("structured output truncated at max_completion_tokens=%d (finish_reason=length): shrink the schema/output or raise the budget with ai.WithMaxTokens", maxOut)
+	}
+	if choice.FinishReason == openai.FinishReasonContentFilter {
+		// also fires when the model starts reproducing well-known text verbatim (regurgitation guard)
+		return nil, fmt.Errorf("structured output stopped by the provider content filter after %d tokens (finish_reason=content_filter): ask for paraphrases instead of verbatim quotes", completion.Usage.CompletionTokens)
+	}
 
 	for _, tc := range choice.Message.ToolCalls {
 		if tc.Function.Name == "structured_output" {
 			var result map[string]any
 			if err := json.Unmarshal([]byte(tc.Function.Arguments), &result); err != nil {
-				return nil, fmt.Errorf("unmarshal function args: %w", err)
+				return nil, fmt.Errorf("unmarshal function args (finish_reason=%s, args_len=%d, completion_tokens=%d): %w",
+					choice.FinishReason, len(tc.Function.Arguments), completion.Usage.CompletionTokens, err)
 			}
 			return result, nil
 		}

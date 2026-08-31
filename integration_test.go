@@ -47,11 +47,11 @@ func newCostTracker(t *testing.T) MeterHook {
 	}
 }
 
-func testPNGBytes(t *testing.T) []byte {
+func testPNGBytesSize(t *testing.T, w, h int) []byte {
 	t.Helper()
-	img := image.NewRGBA(image.Rect(0, 0, 64, 64))
-	for y := range 64 {
-		for x := range 64 {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := range h {
+		for x := range w {
 			img.Set(x, y, color.RGBA{0, 0, 255, 255})
 		}
 	}
@@ -61,6 +61,8 @@ func testPNGBytes(t *testing.T) []byte {
 	}
 	return buf.Bytes()
 }
+
+func testPNGBytes(t *testing.T) []byte { return testPNGBytesSize(t, 64, 64) }
 
 var testSchema = json.RawMessage(`{
 	"type": "object",
@@ -837,4 +839,87 @@ func TestOllama_Integration(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- fal ------------------------------------------------------------------
+
+func TestFal_Integration(t *testing.T) {
+	key := os.Getenv("FAL_API_KEY")
+	if key == "" {
+		t.Skip("FAL_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	// ~$0.24 per run (6s @ 1080p on LTX-2.3 fast).
+	t.Run("VideoGenerate", func(t *testing.T) {
+		t.Parallel()
+		p := newFalVideoProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:         "a solid blue square slowly rotating on a black background",
+			Image:          testPNGBytes(t),
+			ImageMediaType: "image/png",
+			Duration:       6,
+			Resolution:     "1080p",
+			AspectRatio:    "16:9",
+		})
+		if err != nil {
+			t.Fatalf("video generate: %v", err)
+		}
+		if res.URL == "" || !strings.HasPrefix(res.URL, "http") {
+			t.Fatalf("expected a hosted video url, got %q", res.URL)
+		}
+		if res.Duration <= 0 || res.CostUSD <= 0 {
+			t.Fatalf("expected duration + cost, got %+v", res)
+		}
+		t.Logf("video: %s (%dx%d, %.1fs, $%.3f, %s)", res.URL, res.Width, res.Height, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	// ~$0.24 per run (6s @ 1080p on LTX-2.3 fast, text-only).
+	t.Run("TextToVideo", func(t *testing.T) {
+		t.Parallel()
+		p := newFalVideoProvider(key, "fal-ai/ltx-2.3/text-to-video/fast")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:      "a solid blue square slowly rotating on a black background",
+			Duration:    6,
+			Resolution:  "1080p",
+			AspectRatio: "16:9",
+		})
+		if err != nil {
+			t.Fatalf("text-to-video: %v", err)
+		}
+		if res.URL == "" || !strings.HasPrefix(res.URL, "http") {
+			t.Fatalf("expected a hosted video url, got %q", res.URL)
+		}
+		if res.Duration <= 0 || res.CostUSD <= 0 {
+			t.Fatalf("expected duration + cost, got %+v", res)
+		}
+		t.Logf("video: %s (%dx%d, %.1fs, $%.3f, %s)", res.URL, res.Width, res.Height, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	// ~$0.40 per run (5s @ 768p on minimax h3-max).
+	t.Run("VideoGenerate_MinimaxH3Max", func(t *testing.T) {
+		t.Parallel()
+		p := newFalVideoProvider(key, "minimax/h3-max/image-to-video")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:         "a solid blue square slowly rotating on a black background",
+			Image:          testPNGBytesSize(t, 512, 512),
+			ImageMediaType: "image/png",
+			Duration:       5,
+			Resolution:     "768P",
+		})
+		if err != nil {
+			t.Fatalf("video generate: %v", err)
+		}
+		if res.URL == "" || !strings.HasPrefix(res.URL, "http") {
+			t.Fatalf("expected a hosted video url, got %q", res.URL)
+		}
+		if res.Duration <= 0 || res.CostUSD <= 0 {
+			t.Fatalf("expected duration + cost, got %+v", res)
+		}
+		t.Logf("video: %s (%dx%d, %.1fs, $%.3f, %s)", res.URL, res.Width, res.Height, res.Duration, res.CostUSD, res.Elapsed)
+	})
 }

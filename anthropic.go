@@ -145,10 +145,18 @@ func (p *AnthropicProvider) CreateStructuredOutput(ctx context.Context, userProm
 }
 
 func (p *AnthropicProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
-	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
+	return p.CreateStructuredOutputFromParts(ctx, []Part{TextPart{Text: userPrompt}}, sysPrompt, schema)
+}
+
+// CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
+// multimodal user turn (text + base64 images). Honours WithMaxTokens
+// (default 4096): a vision-authored spec routinely needs more.
+func (p *AnthropicProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	userText, _ := PartsText(parts)
+	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
 	}
-	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "anthropic"), zap.String("model", p.model))
+	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "anthropic"), zap.String("model", p.model), zap.Int("parts", len(parts)))
 
 	var schemaObj map[string]any
 	if err := json.Unmarshal(schema, &schemaObj); err != nil {
@@ -179,8 +187,9 @@ func (p *AnthropicProvider) CreateStructuredOutputFromSchema(ctx context.Context
 		orderedProps.Set(k, &v)
 	}
 
+	maxOut := MaxTokensFromCtx(ctx, 4096)
 	message, err := p.client.Messages.New(ctx, anthropic.MessageNewParams{
-		MaxTokens: 4096,
+		MaxTokens: int64(maxOut),
 		Model:     anthropic.Model(p.model),
 		System:    p.buildSysBlocks(ctx, sysPrompt),
 		Tools: []anthropic.ToolUnionParam{
@@ -197,25 +206,49 @@ func (p *AnthropicProvider) CreateStructuredOutputFromSchema(ctx context.Context
 		},
 		ToolChoice: anthropic.ToolChoiceParamOfTool("structured_output"),
 		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(userPrompt)),
+			anthropic.NewUserMessage(anthropicPartBlocks(parts)...),
 		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("anthropic API call failed: %w", err)
 	}
-	p.emitUsage(ctx, message, sysPrompt, userPrompt)
+	p.emitUsage(ctx, message, sysPrompt, userText)
+
+	if string(message.StopReason) == "max_tokens" {
+		return nil, fmt.Errorf("structured output truncated at max_tokens=%d: shrink the schema/output or raise the budget with ai.WithMaxTokens", maxOut)
+	}
+	if string(message.StopReason) == "refusal" {
+		return nil, fmt.Errorf("structured output stopped by the provider safety classifier (stop_reason=refusal): ask for paraphrases instead of verbatim quotes")
+	}
 
 	for _, block := range message.Content {
 		if toolUse, ok := block.AsAny().(anthropic.ToolUseBlock); ok {
 			var result map[string]any
 			if err := json.Unmarshal(toolUse.Input, &result); err != nil {
-				return nil, fmt.Errorf("unmarshal tool input: %w", err)
+				return nil, fmt.Errorf("unmarshal tool input (stop_reason=%s, input_len=%d): %w", message.StopReason, len(toolUse.Input), err)
 			}
 			return result, nil
 		}
 	}
 
 	return nil, fmt.Errorf("no structured output in response")
+}
+
+// anthropicPartBlocks converts a multimodal turn into Anthropic content blocks.
+func anthropicPartBlocks(parts []Part) []anthropic.ContentBlockParamUnion {
+	blocks := make([]anthropic.ContentBlockParamUnion, 0, len(parts))
+	for _, p := range parts {
+		switch v := p.(type) {
+		case ImagePart:
+			blocks = append(blocks, anthropic.NewImageBlockBase64(v.MediaType, v.Data))
+		case TextPart:
+			blocks = append(blocks, anthropic.NewTextBlock(v.Text))
+		}
+	}
+	if len(blocks) == 0 {
+		blocks = append(blocks, anthropic.NewTextBlock(""))
+	}
+	return blocks
 }
 
 func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {

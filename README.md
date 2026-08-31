@@ -60,6 +60,19 @@ for chunk := range ch {
 resp, err := wait()
 ```
 
+### Vision + structured output
+
+Hand a multimodal turn (text + base64 images) to any provider and get schema-constrained JSON back. Providers that cannot see images return `ai.ErrVisionUnsupported` instead of silently dropping them; `ai.WithMaxTokens` raises the output budget (default 4096).
+
+```go
+parts := []ai.Part{
+    ai.ImagePart{MediaType: "image/jpeg", Data: b64},
+    ai.TextPart{Text: "Describe every part of this object."},
+}
+ctx = ai.WithMaxTokens(ctx, 16000)
+out, err := ai.StructuredOutputFromParts(ctx, llm, parts, sysPrompt, schemaJSON) // map[string]any
+```
+
 ### Image Generation
 
 ```go
@@ -81,6 +94,25 @@ stt := ai.NewSTTProvider(provider, apiKey, model)
 text, err := stt.Transcribe(ctx, audioReader, "audio.mp3")
 ```
 
+### Img2Videration
+
+```go
+video, err := ai.NewVideoProvider("fal", apiKey, "") // default: fal-ai/ltx-2.3/image-to-video/fast
+res, err := video.Generate(ctx, ai.VideoRequest{
+    Prompt:   "a robot adopts a stray cat",
+    Image:    lastFrameJPEG, // optional first-frame conditioning
+    Duration: 6, Resolution: "1080p", AspectRatio: "16:9",
+})
+fmt.Println(res.URL, res.Duration, res.CostUSD) // provider URL is temporary — download it
+```
+
+Any fal endpoint can be driven directly through the queue client:
+
+```go
+fal := ai.NewFalClient(apiKey)
+out, err := fal.Run(ctx, "fal-ai/ffmpeg-api/extract-frame", map[string]any{"video_url": url, "frame_type": "last"})
+```
+
 ### Metering
 
 ```go
@@ -96,21 +128,23 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
+| `NewVideoProvider(provider, apiKey, model)` | fal | Video generation (text/image-to-video) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
 ## Capability Matrix
 
-| Provider | Chat | Streaming | Structured Output | Tool Use | Reasoning | Moderation | Prompt Caching | Embeddings | STT | Img: Generate | Img: Edit | Img: Edit w/ Ref |
-|----------|:----:|:---------:|:-----------------:|:--------:|:---------:|:----------:|:--------------:|:----------:|:---:|:-------------:|:---------:|:----------------:|
-| Anthropic | x | x | x | x | x | | x | | | | | |
-| OpenAI | x | x | x | x | x | x | | x | x | x | x | |
-| Gemini | x | x | x | x | | | | | | x | x | x |
-| Ollama | x | x | x | x | | | | | | | | |
-| Hugging Face | x | x | x | x | | | | | | | | |
+| Provider | Chat | Streaming | Structured Output | Tool Use | Reasoning | Moderation | Prompt Caching | Embeddings | STT | Img: Generate | Img: Edit | Img: Edit w/ Ref | Video: Generate |
+|----------|:----:|:---------:|:-----------------:|:--------:|:---------:|:----------:|:--------------:|:----------:|:---:|:-------------:|:---------:|:----------------:|:---------------:|
+| Anthropic | x | x | x | x | x | | x | | | | | | |
+| OpenAI | x | x | x | x | x | x | | x | x | x | x | | |
+| Gemini | x | x | x | x | | | | | | x | x | x | |
+| Ollama | x | x | x | x | | | | | | | | | |
+| Hugging Face | x | x | x | x | | | | | | | | | |
+| fal | | | | | | | | | | | | | x |
 
 ## Pricing
 
-Built-in per-model cost estimation via `EstimateCostFull`. Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
+Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image) and `EstimateVideoCost` (per second of video, optionally per resolution). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
 ## Contributing
 
@@ -189,22 +223,25 @@ Integration test coverage per provider:
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen | Img Edit | Img Edit Ref | Caching |
-|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | ✓ |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | ✓ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | | | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | | | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
 
 <!-- testmatrix:end -->
 

@@ -39,6 +39,11 @@ func ClassifyError(err error) (ErrorKind, string) {
 		return classifyHTTP(oErr.HTTPStatusCode, oErr.Error())
 	}
 
+	var fErr *FalError
+	if errors.As(err, &fErr) {
+		return classifyHTTP(fErr.Status, fErr.Message)
+	}
+
 	msg := err.Error()
 	if strings.Contains(msg, "context canceled") || strings.Contains(msg, "context deadline exceeded") {
 		return ErrUnknown, "request timed out"

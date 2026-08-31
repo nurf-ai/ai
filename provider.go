@@ -155,6 +155,17 @@ func NewImageProvider(ctx context.Context, providerName, apiKey, model string) (
 	}
 }
 
+// NewVideoProvider creates a VideoProvider from a provider name ("fal").
+// For fal, model is the full endpoint id (default DefaultFalVideoModel).
+func NewVideoProvider(providerName, apiKey, model string) (VideoProvider, error) {
+	switch providerName {
+	case "fal":
+		return newFalVideoProvider(apiKey, model), nil
+	default:
+		return nil, fmt.Errorf("unsupported video provider: %s", providerName)
+	}
+}
+
 // SetImageModeration attaches a moderation provider to any ImageProvider
 // that satisfies the moderable interface.
 func SetImageModeration(img ImageProvider, m ModerationProvider) {

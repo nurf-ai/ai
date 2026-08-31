@@ -27,6 +27,16 @@ type modelPricing struct {
 	CacheReadPerMillion     float64 `json:"cache_read_per_million,omitempty"`
 	FlatPerImage            float64 `json:"flat_per_image,omitempty"`
 	MaxInputTokens          int64   `json:"max_input_tokens,omitempty"`
+	// PerVideoSecond is the base $/second of generated video (video models).
+	PerVideoSecond float64 `json:"per_video_second,omitempty"`
+	// PerVideoSecondByResolution overrides PerVideoSecond per resolution label.
+	PerVideoSecondByResolution map[string]float64 `json:"per_video_second_by_resolution,omitempty"`
+}
+
+// IsVideoModel reports whether model is priced per second of video.
+func IsVideoModel(model string) bool {
+	p, ok := pricingTable[model]
+	return ok && p.PerVideoSecond > 0
 }
 
 //go:embed models.json
@@ -68,6 +78,29 @@ func EstimateCostFull(model string, in, out, cw, cr int) float64 {
 		float64(out)*p.OutputPerMillion +
 		float64(cw)*p.CacheCreationPerMillion +
 		float64(cr)*p.CacheReadPerMillion) / 1_000_000
+}
+
+// EstimateVideoCost prices seconds of generated video for a per-second model.
+// resolution selects a per-resolution rate when the table has one; otherwise
+// the base rate applies. Unknown models are recorded as 0 (and reported via
+// the unknown-model hook), like EstimateCostFull.
+func EstimateVideoCost(model string, seconds float64, resolution string) float64 {
+	p, ok := pricingTable[model]
+	if !ok {
+		logger.Warn("unknown video model — cost recorded as 0", zap.String("model", model), zap.Float64("seconds", seconds))
+		if unknownModelHook != nil {
+			unknownModelHook(model)
+		}
+		return 0
+	}
+	rate := p.PerVideoSecond
+	if r, ok := p.PerVideoSecondByResolution[resolution]; ok && r > 0 {
+		rate = r
+	}
+	if rate <= 0 || seconds <= 0 {
+		return 0
+	}
+	return rate * seconds
 }
 
 var deprecatedModels = map[string]bool{
