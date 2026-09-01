@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/nurf-ai/ai/compare/v0.2.0...v0.3.0) (2026-09-01)
+
+
+### Features
+
+* overhaul README, split video columns in testmatrix ([7c22e5f](https://github.com/nurf-ai/ai/commit/7c22e5fa9091f7c4e3a60f4e525135d3f8ed910f))
+
 ## [0.2.0](https://github.com/nurf-ai/ai/compare/v0.1.0...v0.2.0) (2026-08-31)
 
 
