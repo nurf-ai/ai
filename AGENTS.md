@@ -85,4 +85,10 @@ See `.env.test.tpl` for the full list of env vars.
 
 ### Commits & releases
 
-Use conventional commits (`feat:`, `fix:`, etc.). Release Please creates a release PR on push to main — merging it tags and publishes.
+Use [conventional commits](https://www.conventionalcommits.org/). Release Please creates a release PR on push to main — merging it tags and publishes. The prefix determines the version bump:
+
+| Prefix | Bump | When to use |
+|--------|------|-------------|
+| `feat:` | minor | New capability in the library |
+| `fix:` | patch | Bug fix in library code |
+| `docs:`, `chore:`, `test:`, `ci:` | none | No release — README, tooling, tests, CI |

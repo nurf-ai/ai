@@ -238,4 +238,10 @@ golangci-lint run
 go test -race ./...
 ```
 
-- Releases are automated via [Release Please](https://github.com/googleapis/release-please) — use [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, etc.) and a release PR is created automatically on push to main
+- Releases are automated via [Release Please](https://github.com/googleapis/release-please) — use [conventional commits](https://www.conventionalcommits.org/) and a release PR is created automatically on push to main. The prefix determines the version bump:
+
+  | Prefix | Bump | When to use |
+  |--------|------|-------------|
+  | `feat:` | minor | New capability in the library |
+  | `fix:` | patch | Bug fix in library code |
+  | `docs:`, `chore:`, `test:`, `ci:` | none | No release — README, tooling, tests, CI |
