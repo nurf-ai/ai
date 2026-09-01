@@ -10,7 +10,7 @@
 
 <p align="center">Multimodal Go module for building across AI providers, with realistic cost tracking baked in, not just token counts.</p>
 
-<p align="center"><sub>From the obvious to the overlooked: chat, reasoning, tool use, structured output, image gen & editing, speech-to-text, embeddings, moderation.</sub></p>
+<p align="center"><sub>From the obvious to the overlooked: chat, reasoning, tool use, structured output, image gen & editing, video gen, speech-to-text, embeddings, moderation.</sub></p>
 
 ## Install
 
@@ -73,13 +73,6 @@ ctx = ai.WithMaxTokens(ctx, 16000)
 out, err := ai.StructuredOutputFromParts(ctx, llm, parts, sysPrompt, schemaJSON) // map[string]any
 ```
 
-### Image Generation
-
-```go
-img, err := ai.NewImageProvider(ctx, provider, apiKey, model)
-b64, err := img.Generate(ctx, "a cat in space", "", "")
-```
-
 ### Embeddings
 
 ```go
@@ -87,14 +80,14 @@ embedder := ai.NewEmbedder(provider, apiKey)
 vectors, err := embedder.EmbedText(ctx, []string{"hello world"})
 ```
 
-### Speech-to-Text
+### Image Generation
 
 ```go
-stt := ai.NewSTTProvider(provider, apiKey, model)
-text, err := stt.Transcribe(ctx, audioReader, "audio.mp3")
+img, err := ai.NewImageProvider(ctx, provider, apiKey, model)
+b64, err := img.Generate(ctx, "a cat in space", "", "")
 ```
 
-### Img2Videration
+### Video Generation
 
 ```go
 video, err := ai.NewVideoProvider("fal", apiKey, "") // default: fal-ai/ltx-2.3/image-to-video/fast
@@ -106,20 +99,22 @@ res, err := video.Generate(ctx, ai.VideoRequest{
 fmt.Println(res.URL, res.Duration, res.CostUSD) // provider URL is temporary — download it
 ```
 
-Any fal endpoint can be driven directly through the queue client:
+### Speech-to-Text
 
 ```go
-fal := ai.NewFalClient(apiKey)
-out, err := fal.Run(ctx, "fal-ai/ffmpeg-api/extract-frame", map[string]any{"video_url": url, "frame_type": "last"})
+stt := ai.NewSTTProvider(provider, apiKey, model)
+text, err := stt.Transcribe(ctx, audioReader, "audio.mp3")
 ```
 
-### Metering
+### Metering & Pricing
 
 ```go
 ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
     log.Printf("%s: %d tokens, $%.6f", ev.Model, ev.TotalTokens, ev.EstimatedCostUSD)
 })
 ```
+
+Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image) and `EstimateVideoCost` (per second of video, optionally per resolution). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
 ## Providers
 
@@ -131,20 +126,31 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 | `NewVideoProvider(provider, apiKey, model)` | fal | Video generation (text/image-to-video) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
-## Capability Matrix
+Each ✓ means the integration test passes:
 
-| Provider | Chat | Streaming | Structured Output | Tool Use | Reasoning | Moderation | Prompt Caching | Embeddings | STT | Img: Generate | Img: Edit | Img: Edit w/ Ref | Video: Generate |
-|----------|:----:|:---------:|:-----------------:|:--------:|:---------:|:----------:|:--------------:|:----------:|:---:|:-------------:|:---------:|:----------------:|:---------------:|
-| Anthropic | x | x | x | x | x | | x | | | | | | |
-| OpenAI | x | x | x | x | x | x | | x | x | x | x | | |
-| Gemini | x | x | x | x | | | | | | x | x | x | |
-| Ollama | x | x | x | x | | | | | | | | | |
-| Hugging Face | x | x | x | x | | | | | | | | | |
-| fal | | | | | | | | | | | | | x |
+<!-- testmatrix:start -->
 
-## Pricing
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | ✓ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | | | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | | | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
 
-Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image) and `EstimateVideoCost` (per second of video, optionally per resolution). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
+<!-- testmatrix:end -->
 
 ## Contributing
 
@@ -207,7 +213,7 @@ go test -tags=integration -count=1 -json ./... | go run ./cmd/testmatrix
 ```
 
 > [!NOTE]
-> The coverage matrix goes to stdout — paste it into the README between the `<!-- testmatrix:start/end -->` markers. PRs that add or change provider capabilities must include an updated matrix.
+> The capability/coverage matrix goes to stdout — paste it into the README between the `<!-- testmatrix:start/end -->` markers. PRs that add or change provider capabilities must include an updated matrix.
 
 All provider tests use `t.Parallel()`, so subtests run concurrently within a single `go test` invocation. To split across CI jobs, use `-run`:
 
@@ -218,32 +224,6 @@ go test -tags=integration -v -run TestGemini ./...
 go test -tags=integration -v -run TestHuggingFace ./...
 go test -tags=integration -v -run TestOllama ./...
 ```
-
-Integration test coverage per provider:
-
-<!-- testmatrix:start -->
-
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
-|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | ✓ |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | | | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | | | |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | | | |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
-
-<!-- testmatrix:end -->
 
 See `.env.test.tpl` for the full list of env vars.
 
