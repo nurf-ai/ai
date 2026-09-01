@@ -28,6 +28,9 @@ Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
 | `model_limits.go` | `MaxInputTokensLLM` helper, token counting |
 | `provider.go` | Provider registry, `NewLLMProvider` factory |
 | `types.go` | `Message`, `Tool`, `Response`, shared types |
+| `parts.go` | `StructuredOutputFromParts`, `MultimodalStructuredProvider`, multimodal helpers |
+| `stream.go` | `Stream`, `StreamWithChan`, `StreamChunk`, `StreamResult`, `StreamingProvider` |
+| `stream_openai.go` | OpenAI SSE streaming loop (internal) |
 | `errors.go` | Sentinel errors |
 | `logger.go` | Package-level zap logger |
 

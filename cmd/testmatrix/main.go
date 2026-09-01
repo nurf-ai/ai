@@ -51,7 +51,8 @@ var columns = []column{
 	{"Image Gen", "ImageGenerate"},
 	{"Img Edit", "ImageEdit"},
 	{"Img Edit Ref", "ImageEditWithReference"},
-	{"Video Gen", "VideoGenerate"},
+	{"Txt2Vid", "TextToVideo"},
+	{"Img2Vid", "VideoGenerate"},
 	{"Caching", "PromptCaching"},
 }
 
@@ -61,6 +62,7 @@ var leafSubtests = func() map[string]bool {
 		m[c.subtest] = true
 	}
 	m["StreamWithChan"] = true
+	m["VideoGenerate_MinimaxH3Max"] = true
 	return m
 }()
 
@@ -69,6 +71,7 @@ type row struct {
 	model      string
 	testPrefix string
 	only       map[string]bool
+	alias      map[string]string // column subtest → actual test subtest
 }
 
 var chatCaps = map[string]bool{
@@ -85,21 +88,23 @@ var chatReasonCaps = map[string]bool{
 }
 
 var rows = []row{
-	{"Anthropic", "claude-haiku-4-5", "TestAnthropicChat_Integration", chatReasonCaps},
-	{"OpenAI", "gpt-4o-mini", "TestOpenAI_Integration", chatCaps},
-	{"OpenAI", "gpt-5-mini", "TestOpenAI_Integration", map[string]bool{"Reasoning": true}},
-	{"OpenAI", "text-embedding-3-small", "TestOpenAI_Integration", map[string]bool{"Embeddings": true}},
-	{"OpenAI", "whisper-1", "TestOpenAI_Integration", map[string]bool{"STT": true}},
-	{"OpenAI", "omni-moderation-latest", "TestOpenAI_Integration", map[string]bool{"Moderation": true}},
-	{"OpenAI", "gpt-image-1", "TestOpenAI_Integration", map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
-	{"Gemini", "gemini-3.6-flash", "TestGemini_Integration", chatCaps},
-	{"Gemini", "gemini-2.5-flash-image", "TestGemini_Integration", map[string]bool{"ImageGenerate": true, "ImageEdit": true, "ImageEditWithReference": true}},
-	{"Hugging Face", "Kimi-K2-Instruct", "TestHuggingFace_Integration/moonshotai/Kimi-K2-Instruct-0905", nil},
-	{"Hugging Face", "Kimi-K3", "TestHuggingFace_Integration/moonshotai/Kimi-K3", nil},
-	{"Ollama", "qwen3.5:0.8b", "TestOllama_Integration/qwen3.5:0.8b", nil},
-	{"Ollama", "gpt-oss:20b", "TestOllama_Integration/gpt-oss:20b", nil},
-	{"Ollama", "gemma4:e4b", "TestOllama_Integration/gemma4:e4b", nil},
-	{"fal", "ltx-2.3/image-to-video/fast", "TestFal_Integration", map[string]bool{"VideoGenerate": true}},
+	{provider: "Anthropic", model: "claude-haiku-4-5", testPrefix: "TestAnthropicChat_Integration", only: chatReasonCaps},
+	{provider: "OpenAI", model: "gpt-4o-mini", testPrefix: "TestOpenAI_Integration", only: chatCaps},
+	{provider: "OpenAI", model: "gpt-5-mini", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Reasoning": true}},
+	{provider: "OpenAI", model: "text-embedding-3-small", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Embeddings": true}},
+	{provider: "OpenAI", model: "whisper-1", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"STT": true}},
+	{provider: "OpenAI", model: "omni-moderation-latest", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Moderation": true}},
+	{provider: "OpenAI", model: "gpt-image-1", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
+	{provider: "Gemini", model: "gemini-3.6-flash", testPrefix: "TestGemini_Integration", only: chatCaps},
+	{provider: "Gemini", model: "gemini-2.5-flash-image", testPrefix: "TestGemini_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true, "ImageEditWithReference": true}},
+	{provider: "Hugging Face", model: "Kimi-K2-Instruct", testPrefix: "TestHuggingFace_Integration/moonshotai/Kimi-K2-Instruct-0905"},
+	{provider: "Hugging Face", model: "Kimi-K3", testPrefix: "TestHuggingFace_Integration/moonshotai/Kimi-K3"},
+	{provider: "Ollama", model: "qwen3.5:0.8b", testPrefix: "TestOllama_Integration/qwen3.5:0.8b"},
+	{provider: "Ollama", model: "gpt-oss:20b", testPrefix: "TestOllama_Integration/gpt-oss:20b"},
+	{provider: "Ollama", model: "gemma4:e4b", testPrefix: "TestOllama_Integration/gemma4:e4b"},
+	{provider: "fal", model: "ltx-2.3/t2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"TextToVideo": true}},
+	{provider: "fal", model: "ltx-2.3/i2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}},
+	{provider: "fal", model: "minimax/h3-max/i2v", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "VideoGenerate_MinimaxH3Max"}},
 }
 
 var parentToProvider = map[string]string{
@@ -289,7 +294,11 @@ func main() {
 				sb.WriteString(" |")
 				continue
 			}
-			key := r.testPrefix + "/" + c.subtest
+			sub := c.subtest
+			if a, ok := r.alias[sub]; ok {
+				sub = a
+			}
+			key := r.testPrefix + "/" + sub
 			switch results[key] {
 			case "pass":
 				sb.WriteString(" ✓ |")
