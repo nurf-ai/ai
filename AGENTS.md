@@ -1,6 +1,6 @@
 # AGENTS.md — ai
 
-Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
+Multi-provider, multi-modal Go AI library with realistic per-model cost tracking. Covers chat, streaming, structured output, image/video generation, speech-to-text, embeddings, and moderation — with a smart routing engine that picks the cheapest available provider per request. Single `package ai`, module `github.com/nurf-ai/ai`.
 
 ## Files
 

@@ -105,7 +105,7 @@ res, err := video.Generate(ctx, ai.VideoRequest{
     Resolution: "720p", AspectRatio: "16:9",
 })
 
-// veo (Veo 3.1 — high quality, async)
+// veo (Veo 3.1 Fast — async, same key as gemini)
 video, err := ai.NewVideoProvider("veo", apiKey, "")
 res, err := video.Generate(ctx, ai.VideoRequest{
     Prompt: "a robot adopts a stray cat",
@@ -193,7 +193,7 @@ Each ✓ means the integration test passes:
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | ✓ | ✓ | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | ✓ | ✗ | |
 
 <!-- testmatrix:end -->
 
