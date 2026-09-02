@@ -154,7 +154,7 @@ func (p *GeminiVideoProvider) Generate(ctx context.Context, req VideoRequest) (*
 	if req.Duration > 0 {
 		res.Duration = req.Duration
 	} else {
-		res.Duration = 5 // Gemini default ~5s clips
+		res.Duration = 10
 	}
 
 	resolution := req.Resolution
@@ -200,6 +200,11 @@ func (p *GeminiVideoProvider) buildRequest(model string, req VideoRequest) gemin
 		ir.ResponseFormat.Resolution = req.Resolution
 	}
 
+	prompt := req.Prompt
+	if req.Duration > 0 {
+		prompt = fmt.Sprintf("[0-%.0fs] %s", req.Duration, prompt)
+	}
+
 	hasImage := req.ImageURL != "" || len(req.Image) > 0
 	if hasImage {
 		ir.GenConfig = &geminiVideoGenConf{
@@ -221,11 +226,14 @@ func (p *GeminiVideoProvider) buildRequest(model string, req VideoRequest) gemin
 			})
 		}
 		parts = append(parts, map[string]any{
-			"type": "text", "text": req.Prompt,
+			"type": "text", "text": prompt,
 		})
 		ir.Input, _ = json.Marshal(parts)
 	} else {
-		ir.Input, _ = json.Marshal(req.Prompt)
+		ir.GenConfig = &geminiVideoGenConf{
+			VideoConfig: &geminiVideoConfig{Task: "text_to_video"},
+		}
+		ir.Input, _ = json.Marshal(prompt)
 	}
 
 	return ir

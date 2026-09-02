@@ -156,9 +156,9 @@ Each ✓ means the integration test passes:
 | Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
 | Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | |
 | Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ? | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ? | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ? | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
 
 <!-- testmatrix:end -->
 
