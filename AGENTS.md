@@ -19,6 +19,8 @@ Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
 | `fal.go` | fal.ai queue client (`FalClient`: submit / status / result / cancel / run) |
 | `fal_video_provider.go` | fal video generation (LTX-2.3 image/text-to-video) |
 | `video_provider.go` | `VideoProvider` interface, `VideoRequest` / `VideoResult`, `DataURI` |
+| `video_router.go` | `VideoRouter` — multi-provider routing for video gen |
+| `route.go` | Generic provider routing: `Dimension`, `Route()`, `PriceDim`, `AvailabilityDim`, `CapabilityDim` |
 | `openai_moderation_provider.go` | OpenAI content moderation |
 | `image_provider.go` | `ImageProvider` interface |
 | `stt_provider.go` | `STTProvider` interface |

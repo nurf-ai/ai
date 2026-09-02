@@ -104,6 +104,21 @@ res, err := video.Generate(ctx, ai.VideoRequest{
     Prompt: "a robot adopts a stray cat",
     Resolution: "720p", AspectRatio: "16:9",
 })
+
+// router — picks cheapest available provider per request
+fal, _ := ai.NewVideoProvider("fal", falKey, "")
+gemini, _ := ai.NewVideoProvider("gemini", geminiKey, "")
+router, _ := ai.NewVideoRouter(
+    ai.WithRoute(fal),
+    ai.WithRoute(gemini),
+    ai.RouteByPrice(0.7),
+    ai.RouteByAvailability(0.3),
+)
+res, err := router.Generate(ctx, ai.VideoRequest{
+    Prompt: "a robot adopts a stray cat",
+    Resolution: "720p",
+})
+// res.Model tells you which provider was chosen
 ```
 
 ### Speech-to-Text
