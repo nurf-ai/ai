@@ -184,6 +184,7 @@ Each ✓ means the integration test passes:
 | Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
 | Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | | | |
 | Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | ✓ | ✓ | |
+| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | ✓ | | |
 | Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
 | Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
 | Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
@@ -193,7 +194,6 @@ Each ✓ means the integration test passes:
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
 | MiniMax | `MiniMax-H3` | | | | | | | | | | | | | ✓ | ✓ | |
-| Veo | `veo-3.1-fast` | | | | | | | | | | | | | ✓ | | |
 
 <!-- testmatrix:end -->
 
