@@ -75,6 +75,7 @@ func (p *OllamaProvider) emitUsage(ctx context.Context, usage openai.Usage, sysP
 		DebugSpanID:  DebugSpanIDFromCtx(ctx),
 	}
 	attachBlocks(ctx, &ev)
+	ev.Metadata = mergeMeterMetadata(ctx, ev.Metadata)
 	p.meter(ev)
 }
 

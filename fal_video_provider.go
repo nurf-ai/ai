@@ -77,6 +77,9 @@ func (p *FalVideoProvider) Generate(ctx context.Context, req VideoRequest) (*Vid
 	if endpoint == "" {
 		endpoint = p.model
 	}
+	if req.ImageURL == "" && len(req.Image) == 0 {
+		endpoint = textToVideoEndpoint(endpoint)
+	}
 	input := p.buildInput(endpoint, req)
 
 	logger.Debug("fal video generate", zap.String("endpoint", endpoint),
@@ -129,15 +132,23 @@ func (p *FalVideoProvider) Generate(ctx context.Context, req VideoRequest) (*Vid
 			Model:            endpoint,
 			Operation:        MeterOperationFromCtx(ctx),
 			EstimatedCostUSD: res.CostUSD,
-			Metadata: map[string]any{
+			Metadata: mergeMeterMetadata(ctx, map[string]any{
 				"type":       "video_gen",
 				"seconds":    res.Duration,
 				"resolution": req.Resolution,
 				"elapsed_ms": res.Elapsed.Milliseconds(),
-			},
+			}),
 		})
 	}
 	return res, nil
+}
+
+// textToVideoEndpoint maps an image-to-video endpoint to its text-to-video
+// sibling for calls without a conditioning frame: image-to-video endpoints
+// reject a missing image_url (422), and LTX serves the same model under both
+// ids. Endpoints without the marker pass through unchanged.
+func textToVideoEndpoint(endpoint string) string {
+	return strings.Replace(endpoint, "/image-to-video/", "/text-to-video/", 1)
 }
 
 func (p *FalVideoProvider) buildInput(endpoint string, req VideoRequest) map[string]any {
@@ -178,5 +189,33 @@ func (p *FalVideoProvider) buildInput(endpoint string, req VideoRequest) map[str
 		}
 		delete(input, "generate_audio")
 	}
+	// LTX-Video 0.9 family — counts frames, has no audio track:
+	//   ltxv-13b-* : prompt, negative_prompt, resolution (480p|720p),
+	//                aspect_ratio, num_frames, frame_rate, seed
+	//   ltx-video  : prompt, negative_prompt, seed only (768×512, ~5s)
+	if isLTXV13B(endpoint) || isLTXVideo09(endpoint) {
+		fps := req.FPS
+		if fps <= 0 {
+			fps = 24
+		}
+		delete(input, "duration")
+		delete(input, "generate_audio")
+		delete(input, "fps")
+		if isLTXV13B(endpoint) {
+			if req.Duration > 0 {
+				input["num_frames"] = int(math.Round(req.Duration*float64(fps))) + 1
+			}
+			input["frame_rate"] = fps
+			if r, _ := input["resolution"].(string); r != "" && r != "480p" && r != "720p" {
+				delete(input, "resolution") // endpoint default (720p)
+			}
+		} else {
+			delete(input, "resolution")
+			delete(input, "aspect_ratio")
+		}
+	}
 	return input
 }
+
+func isLTXV13B(endpoint string) bool    { return strings.Contains(endpoint, "/ltxv-") }
+func isLTXVideo09(endpoint string) bool { return strings.HasSuffix(endpoint, "/ltx-video") }

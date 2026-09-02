@@ -151,7 +151,7 @@ func (p *GeminiImageProvider) emitImageUsage(ctx context.Context) {
 		Model:            p.model,
 		Operation:        MeterOperationFromCtx(ctx),
 		EstimatedCostUSD: EstimateCostFull(p.model, 0, 0, 0, 0),
-		Metadata:         map[string]any{"type": "image_gen"},
+		Metadata:         mergeMeterMetadata(ctx, map[string]any{"type": "image_gen"}),
 	})
 }
 

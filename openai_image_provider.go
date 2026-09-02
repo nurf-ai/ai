@@ -77,7 +77,7 @@ func (p *OpenAIImageProvider) Generate(ctx context.Context, prompt, model, size 
 			Model:            model,
 			Operation:        MeterOperationFromCtx(ctx),
 			EstimatedCostUSD: EstimateCostFull(model, 0, 0, 0, 0),
-			Metadata:         map[string]any{"type": "image_gen"},
+			Metadata:         mergeMeterMetadata(ctx, map[string]any{"type": "image_gen"}),
 		})
 	}
 	return resp.Data[0].B64JSON, nil
@@ -127,7 +127,7 @@ func (p *OpenAIImageProvider) Edit(ctx context.Context, image []byte, editPrompt
 			Model:            p.defaultModel,
 			Operation:        MeterOperationFromCtx(ctx),
 			EstimatedCostUSD: EstimateCostFull(p.defaultModel, 0, 0, 0, 0),
-			Metadata:         map[string]any{"type": "image_edit"},
+			Metadata:         mergeMeterMetadata(ctx, map[string]any{"type": "image_edit"}),
 		})
 	}
 	return b64, nil

@@ -596,6 +596,7 @@ func (p *AnthropicProvider) emitUsage(ctx context.Context, msg *anthropic.Messag
 		DebugSpanID:              DebugSpanIDFromCtx(ctx),
 	}
 	attachBlocks(ctx, &ev)
+	ev.Metadata = mergeMeterMetadata(ctx, ev.Metadata)
 	p.meter(ev)
 }
 

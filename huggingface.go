@@ -92,6 +92,7 @@ func (p *HuggingFaceProvider) emitUsage(ctx context.Context, usage openai.Usage,
 		DebugSpanID:      DebugSpanIDFromCtx(ctx),
 	}
 	attachBlocks(ctx, &ev)
+	ev.Metadata = mergeMeterMetadata(ctx, ev.Metadata)
 	p.meter(ev)
 }
 

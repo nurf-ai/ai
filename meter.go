@@ -105,6 +105,7 @@ const (
 	ctxKeyDebugSpanID
 	ctxKeyPromptBlocks
 	ctxKeyCacheSysPrompt
+	ctxKeyMeterMetadata
 )
 
 // WithDebugSpanID stamps the current dev-debug span ID on the context so
@@ -142,6 +143,59 @@ func MeterOperationFromCtx(ctx context.Context) string {
 		return op
 	}
 	return "unknown"
+}
+
+// WithMeterMetadata stamps arbitrary key/values on the context so every
+// provider merges them into UsageEvent.Metadata (surf handle, session id,
+// feature flag — whatever the caller wants attributed). Stacking calls merges
+// kv over what is already stamped, later keys win, into a fresh map: the
+// stored map is copied, never mutated, and kv is copied too so the caller may
+// reuse it. Empty/nil kv returns ctx unchanged.
+func WithMeterMetadata(ctx context.Context, kv map[string]any) context.Context {
+	if len(kv) == 0 {
+		return ctx
+	}
+	prev, _ := ctx.Value(ctxKeyMeterMetadata).(map[string]any)
+	merged := make(map[string]any, len(prev)+len(kv))
+	maps.Copy(merged, prev)
+	maps.Copy(merged, kv)
+	return context.WithValue(ctx, ctxKeyMeterMetadata, merged)
+}
+
+// MeterMetadataFromCtx returns a copy of the metadata stamped on ctx via
+// WithMeterMetadata, or nil when none. Mutating the result never touches
+// the context.
+func MeterMetadataFromCtx(ctx context.Context) map[string]any {
+	md, _ := ctx.Value(ctxKeyMeterMetadata).(map[string]any)
+	if len(md) == 0 {
+		return nil
+	}
+	return maps.Clone(md)
+}
+
+// mergeMeterMetadata returns md plus every ctx entry whose key md does not
+// already carry — provider-set keys win over caller-stamped ones. Returns
+// nil when both are empty. The ctx map is never mutated; md may be (it is
+// allocated when nil and ctx has entries). Each adapter calls this as the
+// very last step before its meter hook — after attachBlocks and any other
+// per-provider stamping — so nothing appended later is missed.
+func mergeMeterMetadata(ctx context.Context, md map[string]any) map[string]any {
+	ctxMD, _ := ctx.Value(ctxKeyMeterMetadata).(map[string]any)
+	if len(ctxMD) == 0 {
+		if len(md) == 0 {
+			return nil
+		}
+		return md
+	}
+	if md == nil {
+		md = make(map[string]any, len(ctxMD))
+	}
+	for k, v := range ctxMD {
+		if _, ok := md[k]; !ok {
+			md[k] = v
+		}
+	}
+	return md
 }
 
 // WithPromptBlocks stamps a per-block breakdown on the context so providers

@@ -418,6 +418,7 @@ func (p *GeminiProvider) emitUsage(ctx context.Context, resp *genai.GenerateCont
 		DebugSpanID:          DebugSpanIDFromCtx(ctx),
 	}
 	attachBlocks(ctx, &ev)
+	ev.Metadata = mergeMeterMetadata(ctx, ev.Metadata)
 	p.meter(ev)
 }
 

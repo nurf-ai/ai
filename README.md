@@ -114,6 +114,8 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 })
 ```
 
+Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`, `ai.WithMeterMetadata(ctx, map[string]any{...})` — every provider merges stamped metadata into `UsageEvent.Metadata` (provider-set keys win).
+
 Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image) and `EstimateVideoCost` (per second of video, optionally per resolution). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
 ## Providers
@@ -146,9 +148,9 @@ Each ✓ means the integration test passes:
 | Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
 | Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | |
 | Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ? | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ? | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ? | |
 
 <!-- testmatrix:end -->
 

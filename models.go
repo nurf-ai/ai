@@ -39,6 +39,18 @@ func IsVideoModel(model string) bool {
 	return ok && p.PerVideoSecond > 0
 }
 
+// VideoModels lists every priced video model id, sorted.
+func VideoModels() []string {
+	var out []string
+	for m, p := range pricingTable {
+		if p.PerVideoSecond > 0 {
+			out = append(out, m)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 //go:embed models.json
 var pricingJSON []byte
 
