@@ -88,15 +88,47 @@ func TestEstimateCostFull_FlatImage(t *testing.T) {
 		expect float64
 	}{
 		{"gpt-image-1", 0.04},
-		{"dall-e-3", 0.04},
-		{"gemini-2.5-flash-image", 0.02},
+		{"gemini-2.5-flash-image", 0.039},
 	}
 	for _, tt := range tests {
-		// tokens ignored for flat-rate image models
 		got := EstimateCostFull(tt.model, 999, 999, 999, 999)
 		if got != tt.expect {
 			t.Errorf("%q = %f, want %f", tt.model, got, tt.expect)
 		}
+	}
+}
+
+func TestEstimateVideoCostByTokens(t *testing.T) {
+	// gemini-omni-1.1-flash: input=$1.50/M, video_output=$17.50/M
+	// 11 input + 57920 video output → 11*1.50/1M + 57920*17.50/1M
+	got := EstimateVideoCostByTokens("gemini-omni-1.1-flash", 11, 57920)
+	want := float64(11)*1.50/1_000_000 + float64(57920)*17.50/1_000_000
+	if math.Abs(got-want) > 0.0001 {
+		t.Errorf("gemini video by tokens = %f, want %f", got, want)
+	}
+	// unknown model returns 0
+	if got := EstimateVideoCostByTokens("unknown", 100, 100); got != 0 {
+		t.Errorf("unknown model = %f, want 0", got)
+	}
+}
+
+func TestEstimateImageCostByTokens(t *testing.T) {
+	// gpt-image-1: image_output=$40/M → 1000 tokens = $0.04
+	got := EstimateImageCostByTokens("gpt-image-1", 1000)
+	want := float64(1000) * 40.0 / 1_000_000
+	if math.Abs(got-want) > 0.0001 {
+		t.Errorf("gpt-image-1 by tokens = %f, want %f", got, want)
+	}
+	// with 0 tokens, falls back to flat_per_image
+	got = EstimateImageCostByTokens("gpt-image-1", 0)
+	if got != 0.04 {
+		t.Errorf("gpt-image-1 no tokens = %f, want 0.04 (flat)", got)
+	}
+	// gemini image model
+	got = EstimateImageCostByTokens("gemini-2.5-flash-image", 1300)
+	want = float64(1300) * 30.0 / 1_000_000
+	if math.Abs(got-want) > 0.0001 {
+		t.Errorf("gemini image by tokens = %f, want %f", got, want)
 	}
 }
 

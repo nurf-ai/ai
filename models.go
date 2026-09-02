@@ -27,10 +27,10 @@ type modelPricing struct {
 	CacheReadPerMillion     float64 `json:"cache_read_per_million,omitempty"`
 	FlatPerImage            float64 `json:"flat_per_image,omitempty"`
 	MaxInputTokens          int64   `json:"max_input_tokens,omitempty"`
-	// PerVideoSecond is the base $/second of generated video (video models).
-	PerVideoSecond float64 `json:"per_video_second,omitempty"`
-	// PerVideoSecondByResolution overrides PerVideoSecond per resolution label.
+	PerVideoSecond             float64            `json:"per_video_second,omitempty"`
 	PerVideoSecondByResolution map[string]float64 `json:"per_video_second_by_resolution,omitempty"`
+	ImageOutputPerMillion      float64            `json:"image_output_per_million,omitempty"`
+	VideoOutputPerMillion      float64            `json:"video_output_per_million,omitempty"`
 }
 
 // IsVideoModel reports whether model is priced per second of video.
@@ -113,6 +113,34 @@ func EstimateVideoCost(model string, seconds float64, resolution string) float64
 		return 0
 	}
 	return rate * seconds
+}
+
+// EstimateVideoCostByTokens prices a video generation from actual token
+// counts returned by the provider. Falls back to 0 when the model has no
+// per-token video pricing.
+func EstimateVideoCostByTokens(model string, inputTokens, videoOutputTokens int) float64 {
+	p, ok := pricingTable[model]
+	if !ok || p.VideoOutputPerMillion <= 0 {
+		return 0
+	}
+	cost := float64(videoOutputTokens) * p.VideoOutputPerMillion / 1_000_000
+	if p.InputPerMillion > 0 {
+		cost += float64(inputTokens) * p.InputPerMillion / 1_000_000
+	}
+	return cost
+}
+
+// EstimateImageCostByTokens prices an image generation from output tokens.
+// Falls back to FlatPerImage when the model has no per-token image pricing.
+func EstimateImageCostByTokens(model string, outputTokens int) float64 {
+	p, ok := pricingTable[model]
+	if !ok {
+		return 0
+	}
+	if p.ImageOutputPerMillion > 0 && outputTokens > 0 {
+		return float64(outputTokens) * p.ImageOutputPerMillion / 1_000_000
+	}
+	return p.FlatPerImage
 }
 
 var deprecatedModels = map[string]bool{

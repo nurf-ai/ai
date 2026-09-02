@@ -66,9 +66,21 @@ type geminiVideoConfig struct {
 }
 
 type geminiInteractionResp struct {
-	ID     string       `json:"id"`
-	Status string       `json:"status"`
-	Steps  []geminiStep `json:"steps"`
+	ID     string           `json:"id"`
+	Status string           `json:"status"`
+	Steps  []geminiStep     `json:"steps"`
+	Usage  *geminiUsage     `json:"usage,omitempty"`
+}
+
+type geminiUsage struct {
+	TotalInputTokens  int                   `json:"total_input_tokens"`
+	TotalOutputTokens int                   `json:"total_output_tokens"`
+	OutputByModality  []geminiModalityTokens `json:"output_tokens_by_modality"`
+}
+
+type geminiModalityTokens struct {
+	Modality string `json:"modality"`
+	Tokens   int    `json:"tokens"`
 }
 
 type geminiStep struct {
@@ -161,24 +173,44 @@ func (p *GeminiVideoProvider) Generate(ctx context.Context, req VideoRequest) (*
 	if resolution == "" {
 		resolution = "720p"
 	}
-	res.CostUSD = EstimateVideoCost(model, res.Duration, resolution)
+
+	var inputTokens, videoTokens int
+	if ir.Usage != nil {
+		inputTokens = ir.Usage.TotalInputTokens
+		for _, m := range ir.Usage.OutputByModality {
+			if m.Modality == "video" {
+				videoTokens = m.Tokens
+			}
+		}
+	}
+	if tokenCost := EstimateVideoCostByTokens(model, inputTokens, videoTokens); tokenCost > 0 {
+		res.CostUSD = tokenCost
+	} else {
+		res.CostUSD = EstimateVideoCost(model, res.Duration, resolution)
+	}
 
 	logger.Debug("gemini video generated", zap.String("model", model),
-		zap.Float64("seconds", res.Duration), zap.Duration("elapsed", res.Elapsed), zap.Float64("cost_usd", res.CostUSD))
+		zap.Float64("seconds", res.Duration), zap.Duration("elapsed", res.Elapsed),
+		zap.Float64("cost_usd", res.CostUSD), zap.Int("video_tokens", videoTokens))
 
 	if p.meter != nil {
+		md := map[string]any{
+			"type":       "video_gen",
+			"seconds":    res.Duration,
+			"resolution": resolution,
+			"elapsed_ms": res.Elapsed.Milliseconds(),
+		}
+		if videoTokens > 0 {
+			md["input_tokens"] = inputTokens
+			md["video_tokens"] = videoTokens
+		}
 		p.meter(UsageEvent{
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "gemini",
 			Model:            model,
 			Operation:        MeterOperationFromCtx(ctx),
 			EstimatedCostUSD: res.CostUSD,
-			Metadata: mergeMeterMetadata(ctx, map[string]any{
-				"type":       "video_gen",
-				"seconds":    res.Duration,
-				"resolution": resolution,
-				"elapsed_ms": res.Elapsed.Milliseconds(),
-			}),
+			Metadata:         mergeMeterMetadata(ctx, md),
 		})
 	}
 	return res, nil

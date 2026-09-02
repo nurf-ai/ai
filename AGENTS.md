@@ -26,7 +26,7 @@ Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
 | `stt_provider.go` | `STTProvider` interface |
 | `moderation_provider.go` | `ModerationProvider` interface |
 | `meter.go` | Usage metering hooks, prompt block attribution |
-| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`) + context window lookup, loads `models.json` via `go:embed` |
+| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`) + context window lookup, loads `models.json` via `go:embed` |
 | `models.json` | Per-model pricing + context windows (single source of truth) |
 | `model_limits.go` | `MaxInputTokensLLM` helper, token counting |
 | `provider.go` | Provider registry, `NewLLMProvider` factory |
