@@ -3,7 +3,6 @@ package ai
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,23 +48,18 @@ type veoPredictReq struct {
 }
 
 type veoInstance struct {
-	Prompt string       `json:"prompt"`
-	Image  *veoImage    `json:"image,omitempty"`
+	Prompt string    `json:"prompt"`
+	Image  *veoImage `json:"image,omitempty"`
 }
 
 type veoImage struct {
-	InlineData *veoInlineData `json:"inlineData"`
-}
-
-type veoInlineData struct {
-	MimeType string `json:"mimeType"`
-	Data     string `json:"data"`
+	ImageURI string `json:"imageUri"`
 }
 
 type veoParameters struct {
 	AspectRatio      string `json:"aspectRatio,omitempty"`
 	Resolution       string `json:"resolution,omitempty"`
-	DurationSeconds  string `json:"durationSeconds,omitempty"`
+	DurationSeconds  int    `json:"durationSeconds,omitempty"`
 	PersonGeneration string `json:"personGeneration,omitempty"`
 }
 
@@ -79,6 +73,10 @@ type veoOperationResp struct {
 type veoError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+type veoPredictResp struct {
+	GenerateVideoResponse *veoGenerateResp `json:"generateVideoResponse"`
 }
 
 type veoGenerateResp struct {
@@ -238,33 +236,23 @@ func (p *VeoVideoProvider) poll(ctx context.Context, opName string) (string, err
 			continue
 		}
 
-		var genResp veoGenerateResp
-		if err := json.Unmarshal(op.Response, &genResp); err != nil {
+		var pr veoPredictResp
+		if err := json.Unmarshal(op.Response, &pr); err != nil {
 			return "", fmt.Errorf("veo video: decode result: %w", err)
 		}
-		if len(genResp.GeneratedSamples) == 0 || genResp.GeneratedSamples[0].Video.URI == "" {
+		if pr.GenerateVideoResponse == nil || len(pr.GenerateVideoResponse.GeneratedSamples) == 0 ||
+			pr.GenerateVideoResponse.GeneratedSamples[0].Video.URI == "" {
 			return "", fmt.Errorf("veo video: no video in completed operation")
 		}
-		return genResp.GeneratedSamples[0].Video.URI, nil
+		return pr.GenerateVideoResponse.GeneratedSamples[0].Video.URI, nil
 	}
 }
 
 func (p *VeoVideoProvider) buildRequest(model string, req VideoRequest) veoPredictReq {
 	inst := veoInstance{Prompt: req.Prompt}
 
-	hasImage := req.ImageURL != "" || len(req.Image) > 0
-	if hasImage {
-		var imgData string
-		mt := req.ImageMediaType
-		if mt == "" {
-			mt = "image/jpeg"
-		}
-		if len(req.Image) > 0 {
-			imgData = base64.StdEncoding.EncodeToString(req.Image)
-		}
-		if imgData != "" {
-			inst.Image = &veoImage{InlineData: &veoInlineData{MimeType: mt, Data: imgData}}
-		}
+	if req.ImageURL != "" {
+		inst.Image = &veoImage{ImageURI: req.ImageURL}
 	}
 
 	params := veoParameters{PersonGeneration: "allow_all"}
@@ -275,7 +263,7 @@ func (p *VeoVideoProvider) buildRequest(model string, req VideoRequest) veoPredi
 		params.Resolution = req.Resolution
 	}
 	if req.Duration > 0 {
-		params.DurationSeconds = fmt.Sprintf("%.0f", req.Duration)
+		params.DurationSeconds = int(req.Duration)
 	}
 
 	return veoPredictReq{

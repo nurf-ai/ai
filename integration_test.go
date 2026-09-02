@@ -983,8 +983,9 @@ func TestGeminiVideo_Integration(t *testing.T) {
 func TestVideoRouter_Integration(t *testing.T) {
 	falKey := os.Getenv("FAL_API_KEY")
 	geminiKey := os.Getenv("GEMINI_API_KEY")
-	if falKey == "" && geminiKey == "" {
-		t.Skip("FAL_API_KEY and GEMINI_API_KEY not set")
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	if falKey == "" && geminiKey == "" && minimaxKey == "" {
+		t.Skip("no video provider API keys set")
 	}
 	t.Parallel()
 	ctx := context.Background()
@@ -1003,6 +1004,18 @@ func TestVideoRouter_Integration(t *testing.T) {
 			t.Fatalf("gemini provider: %v", err)
 		}
 		providers = append(providers, WithRoute(gemini))
+		veo, err := NewVideoProvider("veo", geminiKey, "")
+		if err != nil {
+			t.Fatalf("veo provider: %v", err)
+		}
+		providers = append(providers, WithRoute(veo))
+	}
+	if minimaxKey != "" {
+		mm, err := NewVideoProvider("minimax", minimaxKey, "")
+		if err != nil {
+			t.Fatalf("minimax provider: %v", err)
+		}
+		providers = append(providers, WithRoute(mm))
 	}
 
 	t.Run("RouteByPrice", func(t *testing.T) {
@@ -1132,22 +1145,5 @@ func TestVeoVideo_Integration(t *testing.T) {
 		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
 	})
 
-	t.Run("ImageToVideo", func(t *testing.T) {
-		t.Parallel()
-		p := newVeoVideoProvider(key, "veo-3.1-fast-generate-preview")
-		p.SetMeter(newCostTracker(t))
-		res, err := p.Generate(ctx, VideoRequest{
-			Prompt:     "the blue square begins spinning faster",
-			Image:      testPNGBytes(t),
-			Duration:   4,
-			Resolution: "720p",
-		})
-		if err != nil {
-			t.Fatalf("image-to-video: %v", err)
-		}
-		if res.URL == "" {
-			t.Fatal("expected a video url")
-		}
-		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
-	})
+	// Veo I2V requires an image URL (no inline bytes) — skip in automated tests.
 }
