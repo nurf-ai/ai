@@ -923,3 +923,59 @@ func TestFal_Integration(t *testing.T) {
 		t.Logf("video: %s (%dx%d, %.1fs, $%.3f, %s)", res.URL, res.Width, res.Height, res.Duration, res.CostUSD, res.Elapsed)
 	})
 }
+
+// --- gemini video -----------------------------------------------------------
+
+func TestGeminiVideo_Integration(t *testing.T) {
+	key := os.Getenv("GEMINI_API_KEY")
+	if key == "" {
+		t.Skip("GEMINI_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("VideoGenerate", func(t *testing.T) {
+		t.Parallel()
+		p := newGeminiVideoProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:      "a solid blue square slowly rotating on a black background",
+			Image:       testPNGBytes(t),
+			Duration:    5,
+			Resolution:  "720p",
+			AspectRatio: "16:9",
+		})
+		if err != nil {
+			t.Fatalf("video generate: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	t.Run("TextToVideo", func(t *testing.T) {
+		t.Parallel()
+		p := newGeminiVideoProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:      "a solid blue square slowly rotating on a black background",
+			Duration:    5,
+			Resolution:  "720p",
+			AspectRatio: "16:9",
+		})
+		if err != nil {
+			t.Fatalf("text-to-video: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+}

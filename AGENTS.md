@@ -13,6 +13,7 @@ Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
 | `ollama.go` | Ollama provider (local models) |
 | `huggingface.go` | Hugging Face Inference API |
 | `gemini_image_provider.go` | Gemini image generation |
+| `gemini_video_provider.go` | Gemini video generation (Omni Flash, Interactions API) |
 | `openai_image_provider.go` | OpenAI image generation/editing |
 | `openai_stt_provider.go` | OpenAI speech-to-text |
 | `fal.go` | fal.ai queue client (`FalClient`: submit / status / result / cancel / run) |

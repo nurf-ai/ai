@@ -251,6 +251,15 @@
     },
     "gemini-2.5-flash-image": {
       "flat_per_image": 0.02
+    },
+    "gemini-omni-1.1-flash": {
+      "per_video_second": 0.10,
+      "per_video_second_by_resolution": {
+        "360p": 0.05,
+        "720p": 0.10,
+        "1080p": 0.20,
+        "4k": 0.40
+      }
     }
   },
   "fal": {

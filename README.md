@@ -90,13 +90,20 @@ b64, err := img.Generate(ctx, "a cat in space", "", "")
 ### Video Generation
 
 ```go
-video, err := ai.NewVideoProvider("fal", apiKey, "") // default: fal-ai/ltx-2.3/image-to-video/fast
+// fal (LTX-2.3)
+video, err := ai.NewVideoProvider("fal", apiKey, "")
 res, err := video.Generate(ctx, ai.VideoRequest{
     Prompt:   "a robot adopts a stray cat",
     Image:    lastFrameJPEG, // optional first-frame conditioning
     Duration: 6, Resolution: "1080p", AspectRatio: "16:9",
 })
-fmt.Println(res.URL, res.Duration, res.CostUSD) // provider URL is temporary — download it
+
+// gemini (Omni Flash)
+video, err := ai.NewVideoProvider("gemini", apiKey, "")
+res, err := video.Generate(ctx, ai.VideoRequest{
+    Prompt: "a robot adopts a stray cat",
+    Resolution: "720p", AspectRatio: "16:9",
+})
 ```
 
 ### Speech-to-Text
@@ -125,7 +132,7 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
-| `NewVideoProvider(provider, apiKey, model)` | fal | Video generation (text/image-to-video) |
+| `NewVideoProvider(provider, apiKey, model)` | fal, gemini | Video generation (text/image-to-video) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
 Each ✓ means the integration test passes:
@@ -143,6 +150,7 @@ Each ✓ means the integration test passes:
 | OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | | | |
 | Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
 | Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | | | |
+| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | ✓ | ✓ | |
 | Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
 | Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
 | Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |

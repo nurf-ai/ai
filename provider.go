@@ -155,12 +155,15 @@ func NewImageProvider(ctx context.Context, providerName, apiKey, model string) (
 	}
 }
 
-// NewVideoProvider creates a VideoProvider from a provider name ("fal").
+// NewVideoProvider creates a VideoProvider from a provider name ("fal" or "gemini").
 // For fal, model is the full endpoint id (default DefaultFalVideoModel).
+// For gemini, model is the Gemini model id (default DefaultGeminiVideoModel).
 func NewVideoProvider(providerName, apiKey, model string) (VideoProvider, error) {
 	switch providerName {
 	case "fal":
 		return newFalVideoProvider(apiKey, model), nil
+	case "gemini":
+		return newGeminiVideoProvider(apiKey, model), nil
 	default:
 		return nil, fmt.Errorf("unsupported video provider: %s", providerName)
 	}
