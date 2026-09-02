@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 )
 
@@ -115,7 +116,11 @@ func (r *VideoRouter) buildDims(req VideoRequest) []Dimension {
 			if res == "" {
 				res = "720p"
 			}
-			return EstimateVideoCost(model, dur, res)
+			cost := EstimateVideoCost(model, dur, res)
+			if cost <= 0 {
+				return math.MaxFloat64
+			}
+			return cost
 		}))
 	}
 
