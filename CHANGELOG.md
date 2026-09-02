@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/nurf-ai/ai/compare/v0.4.0...v0.4.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* penalize unpriced models in video router price scoring ([fe96bb8](https://github.com/nurf-ai/ai/commit/fe96bb846120b1042b5c7e130cb272f9ad1285f7))
+
 ## [0.4.0](https://github.com/nurf-ai/ai/compare/v0.3.0...v0.4.0) (2026-09-02)
 
 
