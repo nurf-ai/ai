@@ -74,25 +74,31 @@ func (r *VideoRouter) SetMeter(hook MeterHook) {
 }
 
 // Generate picks the best provider for req and delegates to it.
+// If the chosen provider fails, it falls back to the next best.
 func (r *VideoRouter) Generate(ctx context.Context, req VideoRequest) (*VideoResult, error) {
 	dims := r.buildDims(req)
 
-	result, err := Route(ctx, r.order, dims...)
+	ranked, err := RouteAll(ctx, r.order, dims...)
 	if err != nil {
 		return nil, fmt.Errorf("video router: %w", err)
 	}
 
-	provider := r.providers[result.Provider]
-	res, err := provider.Generate(ctx, req)
-	if err != nil {
-		return nil, err
+	var lastErr error
+	for _, candidate := range ranked {
+		provider := r.providers[candidate.Provider]
+		res, err := provider.Generate(ctx, req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		r.mu.Lock()
+		r.latency[candidate.Provider].record(res.Elapsed.Seconds())
+		r.mu.Unlock()
+
+		return res, nil
 	}
-
-	r.mu.Lock()
-	r.latency[result.Provider].record(res.Elapsed.Seconds())
-	r.mu.Unlock()
-
-	return res, nil
+	return nil, fmt.Errorf("video router: all providers failed (last: %w)", lastErr)
 }
 
 func (r *VideoRouter) buildDims(req VideoRequest) []Dimension {
@@ -122,21 +128,7 @@ func (r *VideoRouter) buildDims(req VideoRequest) []Dimension {
 	}
 
 	dims = append(dims, CapabilityDim(func(p string) bool {
-		model := r.providers[p].Model()
-		if !IsVideoModel(model) {
-			return false
-		}
-		res := req.Resolution
-		if res == "" {
-			return true
-		}
-		table := PricingTable()
-		mp, ok := table[model]
-		if !ok || mp.PerVideoSecondByResolution == nil {
-			return true
-		}
-		_, supported := mp.PerVideoSecondByResolution[res]
-		return supported
+		return IsVideoModel(r.providers[p].Model())
 	}))
 
 	return dims

@@ -979,3 +979,75 @@ func TestGeminiVideo_Integration(t *testing.T) {
 		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
 	})
 }
+
+func TestVideoRouter_Integration(t *testing.T) {
+	falKey := os.Getenv("FAL_API_KEY")
+	geminiKey := os.Getenv("GEMINI_API_KEY")
+	if falKey == "" && geminiKey == "" {
+		t.Skip("FAL_API_KEY and GEMINI_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	var providers []VideoRouterOption
+	if falKey != "" {
+		fal, err := NewVideoProvider("fal", falKey, "")
+		if err != nil {
+			t.Fatalf("fal provider: %v", err)
+		}
+		providers = append(providers, WithRoute(fal))
+	}
+	if geminiKey != "" {
+		gemini, err := NewVideoProvider("gemini", geminiKey, "")
+		if err != nil {
+			t.Fatalf("gemini provider: %v", err)
+		}
+		providers = append(providers, WithRoute(gemini))
+	}
+
+	t.Run("RouteByPrice", func(t *testing.T) {
+		t.Parallel()
+		opts := append(providers, RouteByPrice(1.0))
+		router, err := NewVideoRouter(opts...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		router.SetMeter(newCostTracker(t))
+
+		res, err := router.Generate(ctx, VideoRequest{
+			Prompt:     "a solid blue square slowly rotating on a black background",
+			Duration:   5,
+			Resolution: "720p",
+		})
+		if err != nil {
+			t.Fatalf("route by price: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		t.Logf("routed to %s: %s (%.1fs, $%.3f, %s)", res.Model, res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	t.Run("RouteByAvailability", func(t *testing.T) {
+		t.Parallel()
+		opts := append(providers, RouteByAvailability(1.0))
+		router, err := NewVideoRouter(opts...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		router.SetMeter(newCostTracker(t))
+
+		res, err := router.Generate(ctx, VideoRequest{
+			Prompt:     "a solid blue square slowly rotating on a black background",
+			Duration:   5,
+			Resolution: "720p",
+		})
+		if err != nil {
+			t.Fatalf("route by availability: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		t.Logf("routed to %s: %s (%.1fs, $%.3f, %s)", res.Model, res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+}

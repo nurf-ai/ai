@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 )
 
 // Dimension scores providers on one optimization axis.
@@ -115,6 +116,63 @@ func Route(ctx context.Context, candidates []string, dims ...Dimension) (*RouteR
 		}
 	}
 	return &RouteResult{Provider: best, Scores: perDim[best], Total: totals[best]}, nil
+}
+
+// RouteAll returns all viable candidates sorted by score (best first).
+func RouteAll(ctx context.Context, candidates []string, dims ...Dimension) ([]RouteResult, error) {
+	viable := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		ok := true
+		for _, d := range dims {
+			if d.CanHandle != nil && !d.CanHandle(c) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			viable = append(viable, c)
+		}
+	}
+	if len(viable) == 0 {
+		return nil, fmt.Errorf("route: no viable provider")
+	}
+
+	totals := make(map[string]float64, len(viable))
+	perDim := make(map[string]map[string]float64, len(viable))
+	for _, c := range viable {
+		perDim[c] = make(map[string]float64)
+	}
+	for _, d := range dims {
+		if d.Weight == 0 || d.Score == nil {
+			continue
+		}
+		raw := make(map[string]float64, len(viable))
+		for _, c := range viable {
+			s, err := d.Score(ctx, c)
+			if err != nil {
+				s = math.MaxFloat64
+			}
+			raw[c] = s
+		}
+		lo, hi := boundsOf(raw)
+		for c, s := range raw {
+			var norm float64
+			if hi > lo {
+				norm = (s - lo) / (hi - lo)
+			}
+			perDim[c][d.Name] = norm
+			totals[c] += norm * d.Weight
+		}
+	}
+
+	results := make([]RouteResult, len(viable))
+	for i, c := range viable {
+		results[i] = RouteResult{Provider: c, Scores: perDim[c], Total: totals[c]}
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Total < results[j].Total
+	})
+	return results, nil
 }
 
 func boundsOf(m map[string]float64) (lo, hi float64) {
