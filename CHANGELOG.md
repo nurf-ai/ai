@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/nurf-ai/ai/compare/v0.4.1...v0.4.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* move Veo under Gemini provider in testmatrix ([48571cd](https://github.com/nurf-ai/ai/commit/48571cd62198c23fd63e13a14665211674342f5f))
+
 ## [0.4.1](https://github.com/nurf-ai/ai/compare/v0.4.0...v0.4.1) (2026-09-02)
 
 
