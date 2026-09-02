@@ -105,12 +105,30 @@ res, err := video.Generate(ctx, ai.VideoRequest{
     Resolution: "720p", AspectRatio: "16:9",
 })
 
+// veo (Veo 3.1 — high quality, async)
+video, err := ai.NewVideoProvider("veo", apiKey, "")
+res, err := video.Generate(ctx, ai.VideoRequest{
+    Prompt: "a robot adopts a stray cat",
+    Duration: 8, Resolution: "1080p",
+})
+
+// minimax (H3 direct API — async)
+video, err := ai.NewVideoProvider("minimax", apiKey, "")
+res, err := video.Generate(ctx, ai.VideoRequest{
+    Prompt: "a robot adopts a stray cat",
+    Duration: 5, Resolution: "768P",
+})
+
 // router — picks cheapest available provider per request
 fal, _ := ai.NewVideoProvider("fal", falKey, "")
 gemini, _ := ai.NewVideoProvider("gemini", geminiKey, "")
+veo, _ := ai.NewVideoProvider("veo", geminiKey, "")
+minimax, _ := ai.NewVideoProvider("minimax", minimaxKey, "")
 router, _ := ai.NewVideoRouter(
     ai.WithRoute(fal),
     ai.WithRoute(gemini),
+    ai.WithRoute(veo),
+    ai.WithRoute(minimax),
     ai.RouteByPrice(0.7),
     ai.RouteByAvailability(0.3),
 )
@@ -138,7 +156,7 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 
 Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`, `ai.WithMeterMetadata(ctx, map[string]any{...})` — every provider merges stamped metadata into `UsageEvent.Metadata` (provider-set keys win).
 
-Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image) and `EstimateVideoCost` (per second of video, optionally per resolution). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
+Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
 ## Providers
 
@@ -147,7 +165,7 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
-| `NewVideoProvider(provider, apiKey, model)` | fal, gemini | Video generation (text/image-to-video) |
+| `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
 Each ✓ means the integration test passes:

@@ -1051,3 +1051,103 @@ func TestVideoRouter_Integration(t *testing.T) {
 		t.Logf("routed to %s: %s (%.1fs, $%.3f, %s)", res.Model, res.URL, res.Duration, res.CostUSD, res.Elapsed)
 	})
 }
+
+func TestMinimaxVideo_Integration(t *testing.T) {
+	key := os.Getenv("MINIMAX_API_KEY")
+	if key == "" {
+		t.Skip("MINIMAX_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("TextToVideo", func(t *testing.T) {
+		t.Parallel()
+		p := newMinimaxVideoProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:      "a solid blue square slowly rotating on a black background",
+			Duration:    5,
+			Resolution:  "768P",
+			AspectRatio: "16:9",
+		})
+		if err != nil {
+			t.Fatalf("text-to-video: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	t.Run("ImageToVideo", func(t *testing.T) {
+		t.Parallel()
+		p := newMinimaxVideoProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:     "the blue square begins spinning faster",
+			Image:      testPNGBytes(t),
+			Duration:   5,
+			Resolution: "768P",
+		})
+		if err != nil {
+			t.Fatalf("image-to-video: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+}
+
+func TestVeoVideo_Integration(t *testing.T) {
+	key := os.Getenv("GEMINI_API_KEY")
+	if key == "" {
+		t.Skip("GEMINI_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("TextToVideo", func(t *testing.T) {
+		t.Parallel()
+		p := newVeoVideoProvider(key, "veo-3.1-fast-generate-preview")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:      "a solid blue square slowly rotating on a black background",
+			Duration:    4,
+			Resolution:  "720p",
+			AspectRatio: "16:9",
+		})
+		if err != nil {
+			t.Fatalf("text-to-video: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	t.Run("ImageToVideo", func(t *testing.T) {
+		t.Parallel()
+		p := newVeoVideoProvider(key, "veo-3.1-fast-generate-preview")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, VideoRequest{
+			Prompt:     "the blue square begins spinning faster",
+			Image:      testPNGBytes(t),
+			Duration:   4,
+			Resolution: "720p",
+		})
+		if err != nil {
+			t.Fatalf("image-to-video: %v", err)
+		}
+		if res.URL == "" {
+			t.Fatal("expected a video url")
+		}
+		t.Logf("video: %s (%.1fs, $%.3f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+}

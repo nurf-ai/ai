@@ -18,6 +18,8 @@ Multi-provider LLM library. Single `package ai`, module `github.com/nurf-ai/ai`.
 | `openai_stt_provider.go` | OpenAI speech-to-text |
 | `fal.go` | fal.ai queue client (`FalClient`: submit / status / result / cancel / run) |
 | `fal_video_provider.go` | fal video generation (LTX-2.3 image/text-to-video) |
+| `minimax_video_provider.go` | MiniMax direct API video generation (H3/H3-Max, async submit+poll) |
+| `veo_video_provider.go` | Google Veo 3.1 video generation (predictLongRunning API, async) |
 | `video_provider.go` | `VideoProvider` interface, `VideoRequest` / `VideoResult`, `DataURI` |
 | `video_router.go` | `VideoRouter` — multi-provider routing for video gen |
 | `route.go` | Generic provider routing: `Dimension`, `Route()`, `PriceDim`, `AvailabilityDim`, `CapabilityDim` |
