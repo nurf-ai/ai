@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/nurf-ai/ai/compare/v0.2.0...v0.3.0) (2026-09-02)
+
+
+### Features
+
+* context-stamped meter metadata, fal LTX-0.9 + auto t2v endpoint ([7519516](https://github.com/nurf-ai/ai/commit/75195164392e180f37e264b66cdf034c3341674b))
+
 ## [0.2.0](https://github.com/nurf-ai/ai/compare/v0.1.0...v0.2.0) (2026-08-31)
 
 
