@@ -105,14 +105,16 @@ func (p *OpenAIProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 		zap.String("outputType", fmt.Sprintf("%T", structuredOutput)),
 		zap.String("sysPrompt", sysPrompt),
 	)
+	msgs := []openai.ChatCompletionMessage{}
+	if sysPrompt != "" {
+		msgs = append(msgs, openai.ChatCompletionMessage{Role: openai.ChatMessageRoleSystem, Content: sysPrompt})
+	}
+	msgs = append(msgs, openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, Content: userPrompt})
 	_, err := p.instructor.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: p.model,
-			Messages: []openai.ChatCompletionMessage{
-				{Role: openai.ChatMessageRoleSystem, Content: sysPrompt},
-				{Role: openai.ChatMessageRoleUser, Content: userPrompt},
-			},
+			Model:    p.model,
+			Messages: msgs,
 		},
 		structuredOutput,
 	)
@@ -165,12 +167,14 @@ func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 	}
 
 	maxOut := MaxTokensFromCtx(ctx, 4096)
+	msgs := []openai.ChatCompletionMessage{}
+	if sysPrompt != "" {
+		msgs = append(msgs, openai.ChatCompletionMessage{Role: openai.ChatMessageRoleSystem, Content: sysPrompt})
+	}
+	msgs = append(msgs, openaiUserMessageFromParts(parts))
 	req := openai.ChatCompletionRequest{
-		Model: p.model,
-		Messages: []openai.ChatCompletionMessage{
-			{Role: openai.ChatMessageRoleSystem, Content: sysPrompt},
-			openaiUserMessageFromParts(parts),
-		},
+		Model:    p.model,
+		Messages: msgs,
 		Tools: []openai.Tool{
 			{
 				Type: openai.ToolTypeFunction,
