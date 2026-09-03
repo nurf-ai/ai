@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/nurf-ai/ai/compare/v0.5.2...v0.5.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* **openai:** retry function tools with reasoning_effort none when the model refuses reasoning + tools ([d47b89c](https://github.com/nurf-ai/ai/commit/d47b89c4d2af0e9156901fe3e4774ac88e47e0cf))
+
 ## [0.5.2](https://github.com/nurf-ai/ai/compare/v0.5.1...v0.5.2) (2026-09-03)
 
 
