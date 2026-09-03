@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.1](https://github.com/nurf-ai/ai/compare/v0.5.0...v0.5.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **minimax:** map requested resolution onto H3's tiers (480P/768P/2K) ([d030234](https://github.com/nurf-ai/ai/commit/d0302347f01854cff0cf02223e1433a5f1919273))
+* **veo:** fit resolution/duration to Veo 3.1 limits (1080p only at 8 s) ([a4fd7fd](https://github.com/nurf-ai/ai/commit/a4fd7fdbd914166b5210d54f89b5c211e261ce05))
+* **video:** return clip bytes for keyed urls, log router fallbacks, MiniMax resolution case ([9ce7693](https://github.com/nurf-ai/ai/commit/9ce7693c6c85bec2c07da6710e78bfd2f0dd76d7))
+
 ## [0.5.0](https://github.com/nurf-ai/ai/compare/v0.4.2...v0.5.0) (2026-09-03)
 
 
