@@ -176,3 +176,48 @@ func TestVideoRouter_DefaultsToPriceRouting(t *testing.T) {
 		t.Fatalf("default routing picked %q, want fal (cheaper)", res.Model)
 	}
 }
+
+// recordingVideoProvider succeeds and remembers the model it was asked for.
+type recordingVideoProvider struct {
+	name, model string
+	got         []string
+}
+
+func (p *recordingVideoProvider) Name() string  { return p.name }
+func (p *recordingVideoProvider) Model() string { return p.model }
+func (p *recordingVideoProvider) Generate(_ context.Context, req VideoRequest) (*VideoResult, error) {
+	p.got = append(p.got, req.Model)
+	return &VideoResult{URL: "https://" + p.name, Model: p.model}, nil
+}
+
+// A request naming a fal model goes to fal first even when another provider
+// ranks cheaper; when fal is down the others run on their own default model.
+func TestVideoRouter_OwnerFirstThenFallbackOnDefaults(t *testing.T) {
+	falModel := "fal-ai/ltx-2.3/text-to-video/fast"
+	if ModelCompany(falModel) != "fal" {
+		t.Fatalf("models.json: expected %s under fal, got %q", falModel, ModelCompany(falModel))
+	}
+	fal := &recordingVideoProvider{name: "fal", model: falModel}
+	mm := &recordingVideoProvider{name: "minimax", model: "MiniMax-H3"}
+	r, err := NewVideoRouter(WithRoute(mm), WithRoute(fal), RouteByPrice(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := r.Generate(context.Background(), VideoRequest{Prompt: "x", Model: falModel, Duration: 6})
+	if err != nil || res.Model != falModel {
+		t.Fatalf("owner first: res=%+v err=%v", res, err)
+	}
+	if len(mm.got) != 0 {
+		t.Fatalf("minimax should not run while fal succeeds, got %v", mm.got)
+	}
+
+	down := &failingVideoProvider{name: "fal", model: falModel}
+	r2, _ := NewVideoRouter(WithRoute(down), WithRoute(mm), RouteByPrice(1))
+	res, err = r2.Generate(context.Background(), VideoRequest{Prompt: "x", Model: falModel, Duration: 6})
+	if err != nil || res.Model != "MiniMax-H3" {
+		t.Fatalf("fallback: res=%+v err=%v", res, err)
+	}
+	if len(mm.got) != 1 || mm.got[0] != "" {
+		t.Fatalf("fallback provider must get its default model (empty), got %v", mm.got)
+	}
+}

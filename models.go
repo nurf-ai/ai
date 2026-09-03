@@ -55,6 +55,11 @@ func VideoModels() []string {
 var pricingJSON []byte
 
 var pricingTable map[string]modelPricing
+var modelCompany map[string]string
+
+// ModelCompany returns the models.json group a model id belongs to ("fal",
+// "gemini", "minimax", …), or "" for an unknown model.
+func ModelCompany(model string) string { return modelCompany[model] }
 
 func init() {
 	var grouped map[string]map[string]modelPricing
@@ -62,10 +67,12 @@ func init() {
 		panic("ai: parse models.json: " + err.Error())
 	}
 	pricingTable = make(map[string]modelPricing)
+	modelCompany = make(map[string]string)
 	modelMaxInputTokens = make(map[string]int64)
 	for company, models := range grouped {
 		for model, pricing := range models {
 			pricingTable[model] = pricing
+			modelCompany[model] = company
 			if pricing.MaxInputTokens > 0 {
 				modelMaxInputTokens[company+"/"+model] = pricing.MaxInputTokens
 			}

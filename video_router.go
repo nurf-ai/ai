@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 )
 
@@ -76,6 +77,13 @@ func (r *VideoRouter) SetMeter(hook MeterHook) {
 
 // Generate picks the best provider for req and delegates to it.
 // If the chosen provider fails, it falls back to the next best.
+// Generate tries providers in order and returns the first success.
+//
+// A request that names a model goes to that model's provider first (the
+// caller chose it for a reason — price, native audio, …); only if that fails
+// (balance exhausted, outage, moderation) do the others get a turn, each on
+// its own default model since model ids are provider-specific. A request
+// without a model follows the price/availability ranking as before.
 func (r *VideoRouter) Generate(ctx context.Context, req VideoRequest) (*VideoResult, error) {
 	dims := r.buildDims(req)
 
@@ -84,22 +92,59 @@ func (r *VideoRouter) Generate(ctx context.Context, req VideoRequest) (*VideoRes
 		return nil, fmt.Errorf("video router: %w", err)
 	}
 
+	owner := r.ownerOf(req.Model)
+	order := make([]string, 0, len(ranked)+1)
+	if owner != "" {
+		order = append(order, owner)
+	}
+	for _, c := range ranked {
+		if c.Provider != owner {
+			order = append(order, c.Provider)
+		}
+	}
+
 	var lastErr error
-	for _, candidate := range ranked {
-		provider := r.providers[candidate.Provider]
-		res, err := provider.Generate(ctx, req)
+	for _, name := range order {
+		provider := r.providers[name]
+		pr := req
+		if name != owner {
+			pr.Model = "" // not this provider's id → its default model
+		}
+		res, err := provider.Generate(ctx, pr)
 		if err != nil {
 			lastErr = err
 			continue
 		}
 
 		r.mu.Lock()
-		r.latency[candidate.Provider].record(res.Elapsed.Seconds())
+		r.latency[name].record(res.Elapsed.Seconds())
 		r.mu.Unlock()
 
 		return res, nil
 	}
 	return nil, fmt.Errorf("video router: all providers failed (last: %w)", lastErr)
+}
+
+// ownerOf names the routed provider that serves model, or "" when the model
+// is empty/unknown. Matches by exact default model, then by models.json
+// group (fal-ai/… → "fal"; a veo-* id under the gemini group → "veo").
+func (r *VideoRouter) ownerOf(model string) string {
+	if model == "" {
+		return ""
+	}
+	for _, name := range r.order {
+		if r.providers[name].Model() == model {
+			return name
+		}
+	}
+	company := ModelCompany(model)
+	if company == "gemini" && strings.HasPrefix(model, "veo") {
+		company = "veo"
+	}
+	if _, ok := r.providers[company]; ok {
+		return company
+	}
+	return ""
 }
 
 func (r *VideoRouter) buildDims(req VideoRequest) []Dimension {
