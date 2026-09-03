@@ -9,7 +9,7 @@ func TestVeoFit(t *testing.T) {
 		wantRes string
 		wantDur int
 	}{
-		{"1080p", 6, "720p", 6},   // the tv station's request: keep 6 s, drop to 720p
+		{"1080p", 6, "720p", 6},  // the tv station's request: keep 6 s, drop to 720p
 		{"1080p", 8, "1080p", 8}, // 1080p is fine at 8 s
 		{"1080P", 6, "720p", 6},
 		{"720p", 6, "720p", 6},

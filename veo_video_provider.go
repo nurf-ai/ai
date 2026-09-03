@@ -1,13 +1,13 @@
 package ai
 
 import (
-	"strings"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
