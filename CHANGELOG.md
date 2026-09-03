@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/nurf-ai/ai/compare/v0.5.1...v0.5.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **openai:** skip empty system prompt in structured output calls ([f45d910](https://github.com/nurf-ai/ai/commit/f45d910edd00c25ddc81b5905c189500fc198369))
+
 ## [0.5.1](https://github.com/nurf-ai/ai/compare/v0.5.0...v0.5.1) (2026-09-03)
 
 
