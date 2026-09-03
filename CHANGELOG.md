@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nurf-ai/ai/compare/v0.4.2...v0.5.0) (2026-09-03)
+
+
+### Features
+
+* **video:** route to the requested model's provider first, fall back on defaults ([61cf34f](https://github.com/nurf-ai/ai/commit/61cf34f5789b50c34a0524e8bd47a987ef686c8a))
+
 ## [0.4.2](https://github.com/nurf-ai/ai/compare/v0.4.1...v0.4.2) (2026-09-02)
 
 
