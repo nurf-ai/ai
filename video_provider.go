@@ -54,6 +54,9 @@ type VideoResult struct {
 	Seed        int64
 	CostUSD     float64
 	Elapsed     time.Duration
+	// Data holds the clip bytes when URL is not publicly fetchable (Gemini and
+	// Veo serve files behind the API key). Empty for providers with public URLs.
+	Data []byte
 }
 
 // VideoProvider generates short video clips from a prompt and an optional

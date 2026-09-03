@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -44,18 +45,18 @@ func (p *MinimaxVideoProvider) SetMeter(hook MeterHook)            { p.meter = h
 func (p *MinimaxVideoProvider) SetModeration(m ModerationProvider) { p.moderation = m }
 
 type minimaxSubmitReq struct {
-	Model      string             `json:"model"`
-	Content    []minimaxContent   `json:"content"`
-	Duration   int                `json:"duration,omitempty"`
-	Resolution string             `json:"resolution,omitempty"`
-	Ratio      string             `json:"ratio,omitempty"`
+	Model      string           `json:"model"`
+	Content    []minimaxContent `json:"content"`
+	Duration   int              `json:"duration,omitempty"`
+	Resolution string           `json:"resolution,omitempty"`
+	Ratio      string           `json:"ratio,omitempty"`
 }
 
 type minimaxContent struct {
-	Type     string            `json:"type"`
-	Text     string            `json:"text,omitempty"`
-	ImageURL *minimaxImageURL  `json:"image_url,omitempty"`
-	Role     string            `json:"role,omitempty"`
+	Type     string           `json:"type"`
+	Text     string           `json:"text,omitempty"`
+	ImageURL *minimaxImageURL `json:"image_url,omitempty"`
+	Role     string           `json:"role,omitempty"`
 }
 
 type minimaxImageURL struct {
@@ -239,7 +240,7 @@ func (p *MinimaxVideoProvider) buildRequest(model string, req VideoRequest) mini
 		r.Duration = int(req.Duration)
 	}
 	if req.Resolution != "" {
-		r.Resolution = req.Resolution
+		r.Resolution = strings.ToUpper(req.Resolution) // MiniMax spells it 768P / 1080P
 	}
 
 	hasImage := req.ImageURL != "" || len(req.Image) > 0

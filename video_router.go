@@ -6,6 +6,8 @@ import (
 	"math"
 	"strings"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 // VideoRouter routes Generate calls across multiple VideoProviders using
@@ -112,6 +114,8 @@ func (r *VideoRouter) Generate(ctx context.Context, req VideoRequest) (*VideoRes
 		}
 		res, err := provider.Generate(ctx, pr)
 		if err != nil {
+			logger.Warn("video router: provider failed, trying next",
+				zap.String("provider", name), zap.String("model", provider.Model()), zap.Error(err))
 			lastErr = err
 			continue
 		}

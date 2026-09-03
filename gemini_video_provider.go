@@ -66,15 +66,15 @@ type geminiVideoConfig struct {
 }
 
 type geminiInteractionResp struct {
-	ID     string           `json:"id"`
-	Status string           `json:"status"`
-	Steps  []geminiStep     `json:"steps"`
-	Usage  *geminiUsage     `json:"usage,omitempty"`
+	ID     string       `json:"id"`
+	Status string       `json:"status"`
+	Steps  []geminiStep `json:"steps"`
+	Usage  *geminiUsage `json:"usage,omitempty"`
 }
 
 type geminiUsage struct {
-	TotalInputTokens  int                   `json:"total_input_tokens"`
-	TotalOutputTokens int                   `json:"total_output_tokens"`
+	TotalInputTokens  int                    `json:"total_input_tokens"`
+	TotalOutputTokens int                    `json:"total_output_tokens"`
 	OutputByModality  []geminiModalityTokens `json:"output_tokens_by_modality"`
 }
 
@@ -156,9 +156,17 @@ func (p *GeminiVideoProvider) Generate(ctx context.Context, req VideoRequest) (*
 
 	if videoContent.URI != "" {
 		res.URL = videoContent.URI
+		// The file URI is served behind the API key: hand callers the bytes.
+		if data, ferr := fetchVideoBytes(ctx, videoContent.URI, map[string]string{"x-goog-api-key": p.apiKey}); ferr != nil {
+			logger.Warn("gemini video: clip fetch failed — result carries the keyed url only", zap.Error(ferr))
+		} else {
+			res.Data = data
+			res.FileSize = int64(len(data))
+		}
 	} else if videoContent.Data != "" {
 		res.URL = "data:" + res.ContentType + ";base64," + videoContent.Data
 		if decoded, err := base64.StdEncoding.DecodeString(videoContent.Data); err == nil {
+			res.Data = decoded
 			res.FileSize = int64(len(decoded))
 		}
 	}

@@ -43,7 +43,7 @@ func (p *VeoVideoProvider) SetMeter(hook MeterHook)            { p.meter = hook 
 func (p *VeoVideoProvider) SetModeration(m ModerationProvider) { p.moderation = m }
 
 type veoPredictReq struct {
-	Instances  []veoInstance  `json:"instances"`
+	Instances  []veoInstance `json:"instances"`
 	Parameters veoParameters `json:"parameters"`
 }
 
@@ -137,6 +137,13 @@ func (p *VeoVideoProvider) Generate(ctx context.Context, req VideoRequest) (*Vid
 		Duration:    duration,
 		Model:       model,
 		Elapsed:     time.Since(start),
+	}
+	// The file URI is served behind the API key: hand callers the bytes.
+	if data, ferr := fetchVideoBytes(ctx, videoURL, map[string]string{"x-goog-api-key": p.apiKey}); ferr != nil {
+		logger.Warn("veo video: clip fetch failed — result carries the keyed url only", zap.Error(ferr))
+	} else {
+		res.Data = data
+		res.FileSize = int64(len(data))
 	}
 	res.CostUSD = EstimateVideoCost(model, res.Duration, resolution)
 
