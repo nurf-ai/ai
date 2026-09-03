@@ -116,7 +116,7 @@ func (p *MinimaxVideoProvider) Generate(ctx context.Context, req VideoRequest) (
 	if duration <= 0 {
 		duration = 5
 	}
-	resolution := req.Resolution
+	resolution := minimaxResolution(req.Resolution)
 	if resolution == "" {
 		resolution = "768P"
 	}
@@ -240,7 +240,7 @@ func (p *MinimaxVideoProvider) buildRequest(model string, req VideoRequest) mini
 		r.Duration = int(req.Duration)
 	}
 	if req.Resolution != "" {
-		r.Resolution = strings.ToUpper(req.Resolution) // MiniMax spells it 768P / 1080P
+		r.Resolution = minimaxResolution(req.Resolution)
 	}
 
 	hasImage := req.ImageURL != "" || len(req.Image) > 0
@@ -267,6 +267,35 @@ func (p *MinimaxVideoProvider) buildRequest(model string, req VideoRequest) mini
 	}
 
 	return r
+}
+
+// minimaxResolution maps a caller's resolution onto what MiniMax-H3 accepts
+// (480P, 768P, 2K — a 1080p request is a 400 "does not support resolution").
+// Picks the nearest tier at or below the requested height; unknown strings
+// pass through upper-cased (MiniMax spells tiers 768P, not 768p).
+func minimaxResolution(requested string) string {
+	up := strings.ToUpper(strings.TrimSpace(requested))
+	switch up {
+	case "", "480P", "768P", "2K":
+		return up
+	}
+	n := 0
+	for _, c := range up {
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	switch {
+	case n == 0:
+		return up
+	case n >= 1440:
+		return "2K"
+	case n >= 768:
+		return "768P"
+	default:
+		return "480P"
+	}
 }
 
 // minimaxPricingKey returns the model ID as-is — models.json has direct
