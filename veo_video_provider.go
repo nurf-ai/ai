@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"strings"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -255,6 +256,27 @@ func (p *VeoVideoProvider) poll(ctx context.Context, opName string) (string, err
 	}
 }
 
+// veoFit maps a caller's resolution/duration onto what Veo 3.1 accepts:
+// durations 4–8 s, and 1080p only at 8 s ("1080p is not supported for a
+// duration of 6 seconds"). Keeps the caller's length and drops to 720p rather
+// than stretching the clip (and the bill). Resolutions are lower-case.
+func veoFit(resolution string, duration float64) (string, int) {
+	res := strings.ToLower(strings.TrimSpace(resolution))
+	dur := 0
+	if duration > 0 {
+		dur = int(duration)
+		if dur < 4 {
+			dur = 4
+		} else if dur > 8 {
+			dur = 8
+		}
+	}
+	if res == "1080p" && dur != 0 && dur != 8 {
+		res = "720p"
+	}
+	return res, dur
+}
+
 func (p *VeoVideoProvider) buildRequest(model string, req VideoRequest) veoPredictReq {
 	inst := veoInstance{Prompt: req.Prompt}
 
@@ -266,12 +288,7 @@ func (p *VeoVideoProvider) buildRequest(model string, req VideoRequest) veoPredi
 	if req.AspectRatio != "" {
 		params.AspectRatio = req.AspectRatio
 	}
-	if req.Resolution != "" {
-		params.Resolution = req.Resolution
-	}
-	if req.Duration > 0 {
-		params.DurationSeconds = int(req.Duration)
-	}
+	params.Resolution, params.DurationSeconds = veoFit(req.Resolution, req.Duration)
 
 	return veoPredictReq{
 		Instances:  []veoInstance{inst},
