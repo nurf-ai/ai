@@ -19,6 +19,10 @@ type OpenAIProvider struct {
 	model      string
 	moderation ModerationProvider
 	meter      MeterHook
+	// toolsNoReasoning is set after the API refuses function tools together
+	// with reasoning_effort on /v1/chat/completions (some gpt-5.x variants):
+	// tool calls then go out with reasoning_effort "none" from the start.
+	toolsNoReasoning bool
 }
 
 func (p *OpenAIProvider) WithModeration(m ModerationProvider) *OpenAIProvider {
@@ -35,7 +39,18 @@ func (p *OpenAIProvider) SetMeter(hook MeterHook)            { p.meter = hook }
 func (p *OpenAIProvider) SetModeration(m ModerationProvider) { p.moderation = m }
 
 func NewOpenAIProvider(apiKey, model string) *OpenAIProvider {
-	raw := openai.NewClient(apiKey)
+	return newOpenAIProvider(openai.NewClient(apiKey), model)
+}
+
+// NewOpenAIProviderWithBaseURL targets an OpenAI-compatible endpoint (proxy,
+// gateway, test server) instead of api.openai.com.
+func NewOpenAIProviderWithBaseURL(apiKey, model, baseURL string) *OpenAIProvider {
+	cfg := openai.DefaultConfig(apiKey)
+	cfg.BaseURL = baseURL
+	return newOpenAIProvider(openai.NewClientWithConfig(cfg), model)
+}
+
+func newOpenAIProvider(raw *openai.Client, model string) *OpenAIProvider {
 	client := instructor.FromOpenAI(
 		raw,
 		instructor.WithMode(instructor.ModeJSON),
@@ -353,9 +368,18 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []T
 	}
 	if len(apiTools) > 0 {
 		req.Tools = apiTools
+		if p.toolsNoReasoning {
+			req.ReasoningEffort = "none"
+		}
 	}
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
+	if err != nil && toolsRejectReasoning(err, len(apiTools) > 0, req.ReasoningEffort) {
+		// the model wants reasoning off for function tools on this endpoint: once, then sticky
+		p.toolsNoReasoning = true
+		req.ReasoningEffort = "none"
+		completion, err = p.raw.CreateChatCompletion(ctx, req)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("openai chat failed: %w", err)
 	}
@@ -473,9 +497,17 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 	}
 	if len(apiTools) > 0 {
 		req.Tools = apiTools
+		if p.toolsNoReasoning {
+			req.ReasoningEffort = "none"
+		}
 	}
 
 	resp, usage, err := openaiStreamLoop(ctx, p.raw, req, cb)
+	if err != nil && toolsRejectReasoning(err, len(apiTools) > 0, req.ReasoningEffort) {
+		p.toolsNoReasoning = true
+		req.ReasoningEffort = "none"
+		resp, usage, err = openaiStreamLoop(ctx, p.raw, req, cb)
+	}
 	if err != nil && !errors.Is(err, errStreamBreak) {
 		return nil, fmt.Errorf("openai stream: %w", err)
 	}
@@ -483,4 +515,21 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 	sysText, userText := extractPrompts(messages)
 	p.emitUsage(ctx, usage, sysText, userText)
 	return resp, nil
+}
+
+// toolsRejectReasoning recognises the 400 some gpt-5.x variants return when a
+// chat-completions request carries function tools while reasoning is on
+// ("Function tools with reasoning_effort are not supported for <model> …
+// set reasoning_effort to 'none'"). Nothing was sent to the model, so a retry
+// with reasoning_effort "none" is safe.
+func toolsRejectReasoning(err error, hasTools bool, effort string) bool {
+	if err == nil || !hasTools || effort == "none" {
+		return false
+	}
+	var apiErr *openai.APIError
+	if !errors.As(err, &apiErr) || apiErr.HTTPStatusCode != 400 {
+		return false
+	}
+	msg := strings.ToLower(apiErr.Message)
+	return strings.Contains(msg, "reasoning_effort") && strings.Contains(msg, "tool")
 }
