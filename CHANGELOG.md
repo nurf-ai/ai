@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/nurf-ai/ai/compare/v0.5.3...v0.6.0) (2026-09-05)
+
+
+### Features
+
+* **stream:** emit tool-call argument deltas in StreamChunk ([4f2acdf](https://github.com/nurf-ai/ai/commit/4f2acdf38a9a11081ffa748ce183da907f90a41c))
+
 ## [0.5.3](https://github.com/nurf-ai/ai/compare/v0.5.2...v0.5.3) (2026-09-03)
 
 
