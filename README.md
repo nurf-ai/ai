@@ -168,7 +168,7 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 | `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
-Each ✓ means the integration test passes:
+Each ✓ means the integration test passes, ✗ means it fails, and — means it hasn't been run yet:
 
 <!-- testmatrix:start -->
 
@@ -193,7 +193,7 @@ Each ✓ means the integration test passes:
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | ✓ | ✗ | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | — | — | |
 
 <!-- testmatrix:end -->
 
