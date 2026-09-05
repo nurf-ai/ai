@@ -9,8 +9,13 @@ import (
 )
 
 // StreamChunk is a single piece of a streaming response.
+// Text carries free-form content deltas. ToolName + ToolArg carry
+// tool-call argument fragments so callers can stream tool output
+// (e.g. the REPLY tool's text field) before the call finalizes.
 type StreamChunk struct {
-	Text string
+	Text     string
+	ToolName string
+	ToolArg  string
 }
 
 var errStreamBreak = errors.New("stream break")

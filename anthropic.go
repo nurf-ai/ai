@@ -755,6 +755,13 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 				}
 			case anthropic.InputJSONDelta:
 				currentToolArgs.WriteString(delta.PartialJSON)
+				if err := cb(StreamChunk{ToolName: currentToolName, ToolArg: delta.PartialJSON}); err != nil {
+					resp := &Response{Content: content.String()}
+					if len(toolCalls) > 0 {
+						resp.ToolCalls = toolCalls
+					}
+					return resp, err
+				}
 			}
 		case anthropic.ContentBlockStopEvent:
 			if inToolUse {

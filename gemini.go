@@ -382,6 +382,13 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 			if part.FunctionCall != nil {
 				args, _ := json.Marshal(part.FunctionCall.Args)
 				toolCalls = append(toolCalls, ToolCall{ID: part.FunctionCall.ID, Name: part.FunctionCall.Name, Arguments: args})
+				if err := cb(StreamChunk{ToolName: part.FunctionCall.Name, ToolArg: string(args)}); err != nil {
+					resp := &Response{Content: content.String()}
+					if len(toolCalls) > 0 {
+						resp.ToolCalls = toolCalls
+					}
+					return resp, err
+				}
 			}
 		}
 	}

@@ -74,6 +74,16 @@ func openaiStreamLoop(ctx context.Context, raw *openai.Client, req openai.ChatCo
 			}
 			if tc.Function.Arguments != "" {
 				toolArgsBuf[idx].WriteString(tc.Function.Arguments)
+				if idx < len(toolCalls) && toolCalls[idx].Name != "" {
+					if err := cb(StreamChunk{ToolName: toolCalls[idx].Name, ToolArg: tc.Function.Arguments}); err != nil {
+						resp := &Response{Content: content.String()}
+						finalizeOpenAIToolCalls(&toolCalls, toolArgsBuf)
+						if len(toolCalls) > 0 {
+							resp.ToolCalls = toolCalls
+						}
+						return resp, usage, err
+					}
+				}
 			}
 		}
 	}
