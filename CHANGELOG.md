@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/nurf-ai/ai/compare/v0.6.0...v0.7.0) (2026-09-06)
+
+
+### Features
+
+* text-to-speech provider (OpenAI gpt-4o-mini-tts) ([f207ffe](https://github.com/nurf-ai/ai/commit/f207ffe62188c6f4f83488f0e2de87da07a8e03c))
+
 ## [0.6.0](https://github.com/nurf-ai/ai/compare/v0.5.3...v0.6.0) (2026-09-05)
 
 
