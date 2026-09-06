@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/nurf-ai/ai/compare/v0.7.0...v0.7.1) (2026-09-06)
+
+
+### Bug Fixes
+
+* change default TTS voice to Coral ([edb636f](https://github.com/nurf-ai/ai/commit/edb636f6141be8468afc24d032b565c384819bc0))
+
 ## [0.7.0](https://github.com/nurf-ai/ai/compare/v0.6.0...v0.7.0) (2026-09-06)
 
 
