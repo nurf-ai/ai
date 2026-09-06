@@ -13,7 +13,7 @@ import (
 // OpenAI caps a single speech request at 4096 characters.
 const openAITTSMaxChars = 4096
 
-const openAITTSDefaultVoice = openai.VoiceNova
+const openAITTSDefaultVoice = openai.VoiceCoral
 
 type OpenAITTSProvider struct {
 	raw   *openai.Client
