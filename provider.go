@@ -143,6 +143,17 @@ func NewSTTProvider(providerName, apiKey, model string) STTProvider {
 	}
 }
 
+// NewTTSProvider creates a TTSProvider from a provider name + API key + model.
+// Only OpenAI is supported for now — returns nil for other providers.
+func NewTTSProvider(providerName, apiKey, model string) TTSProvider {
+	switch providerName {
+	case "openai":
+		return newOpenAITTSProvider(apiKey, model)
+	default:
+		return nil
+	}
+}
+
 // NewImageProvider creates an ImageProvider from a provider name ("openai" or "gemini").
 func NewImageProvider(ctx context.Context, providerName, apiKey, model string) (ImageProvider, error) {
 	switch providerName {

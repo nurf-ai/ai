@@ -58,6 +58,35 @@ func TestNewSTTProvider_Unsupported(t *testing.T) {
 	}
 }
 
+func TestNewTTSProvider_OpenAI(t *testing.T) {
+	p := NewTTSProvider("openai", "fake-key", "")
+	if p == nil {
+		t.Fatal("expected non-nil TTS provider")
+	}
+	if _, ok := p.(*OpenAITTSProvider); !ok {
+		t.Errorf("expected *OpenAITTSProvider, got %T", p)
+	}
+	if got := p.(*OpenAITTSProvider).model; got != "gpt-4o-mini-tts" {
+		t.Errorf("default model = %q, want gpt-4o-mini-tts", got)
+	}
+}
+
+func TestNewTTSProvider_Unsupported(t *testing.T) {
+	p := NewTTSProvider("nope", "k", "m")
+	if p != nil {
+		t.Errorf("expected nil for unsupported provider, got %v", p)
+	}
+}
+
+func TestTTSMimeType(t *testing.T) {
+	cases := map[string]string{"": "audio/mpeg", "mp3": "audio/mpeg", "wav": "audio/wav", "opus": "audio/ogg", "bogus": "application/octet-stream"}
+	for format, want := range cases {
+		if got := TTSMimeType(format); got != want {
+			t.Errorf("TTSMimeType(%q) = %q, want %q", format, got, want)
+		}
+	}
+}
+
 func TestNewEmbedder_OpenAI(t *testing.T) {
 	e := NewEmbedder("openai", "fake-key")
 	if e == nil {

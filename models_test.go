@@ -14,12 +14,27 @@ import (
 // declares max_input_tokens. Catches entries where the field was omitted.
 func TestPricingCoverage(t *testing.T) {
 	for model, p := range pricingTable {
-		if p.FlatPerImage > 0 || p.PerVideoSecond > 0 || stripDateSuffix(model) != model {
+		if p.FlatPerImage > 0 || p.PerVideoSecond > 0 || p.TTSPerMillionChars > 0 || stripDateSuffix(model) != model {
 			continue
 		}
 		if p.MaxInputTokens == 0 {
 			t.Errorf("model %q has pricing but no max_input_tokens in models.json", model)
 		}
+	}
+}
+
+func TestEstimateTTSCost(t *testing.T) {
+	if got := EstimateTTSCost("tts-1", 1_000_000); got != 15.0 {
+		t.Errorf("tts-1 1M chars = %v, want 15", got)
+	}
+	if got := EstimateTTSCost("gpt-4o-mini-tts", 1000); got != 0.016 {
+		t.Errorf("gpt-4o-mini-tts 1k chars = %v, want 0.016", got)
+	}
+	if got := EstimateTTSCost("gpt-4o-mini", 1000); got != 0 {
+		t.Errorf("non-tts model priced as %v, want 0", got)
+	}
+	if !IsTTSModel("tts-1-hd") || IsTTSModel("gpt-4o-mini") {
+		t.Error("IsTTSModel misclassifies")
 	}
 }
 

@@ -10,7 +10,7 @@
 
 <p align="center">Multimodal Go module for building across AI providers, with realistic cost tracking baked in, not just token counts.</p>
 
-<p align="center"><sub>From the obvious to the overlooked: chat, reasoning, tool use, structured output, image gen & editing, video gen, speech-to-text, embeddings, moderation.</sub></p>
+<p align="center"><sub>From the obvious to the overlooked: chat, reasoning, tool use, structured output, image gen & editing, video gen, speech-to-text, text-to-speech, embeddings, moderation.</sub></p>
 
 ## Install
 
@@ -146,6 +146,17 @@ stt := ai.NewSTTProvider(provider, apiKey, model)
 text, err := stt.Transcribe(ctx, audioReader, "audio.mp3")
 ```
 
+### Text-to-Speech
+
+Audio streams back progressively; close the reader when done. `Voice`, `Format` (mp3 default), `Speed` and `Instructions` are optional.
+
+```go
+tts := ai.NewTTSProvider(provider, apiKey, model)
+audio, err := tts.Synthesize(ctx, ai.TTSRequest{Text: "hello", Voice: "nova"})
+defer audio.Close()
+io.Copy(w, audio)
+```
+
 ### Metering & Pricing
 
 ```go
@@ -156,7 +167,7 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 
 Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`, `ai.WithMeterMetadata(ctx, map[string]any{...})` — every provider merges stamped metadata into `UsageEvent.Metadata` (provider-set keys win).
 
-Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
+Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
 ## Providers
 
@@ -165,6 +176,7 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
+| `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
 | `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
@@ -172,28 +184,29 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
-|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | ✓ |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | ✓ | | | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | ✓ | ✓ | | | | |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | ✓ | ✓ | ✓ | | | |
-| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | ✓ | ✓ | |
-| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | ✓ | | |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | ✓ | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | ✓ | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | ✓ | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | — | — | |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | ✓ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | | |
+| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | ✓ | | | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | | ✓ | | | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | | ✓ | ✓ | | | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | ✓ | ✓ | ✓ | | | |
+| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | ✓ | ✓ | |
+| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | ✓ | | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | ✓ | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | ✓ | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | ✓ | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | — | — | |
 
 <!-- testmatrix:end -->
 

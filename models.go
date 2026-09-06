@@ -21,16 +21,25 @@ func PricingTable() map[string]modelPricing {
 }
 
 type modelPricing struct {
-	InputPerMillion         float64 `json:"input_per_million"`
-	OutputPerMillion        float64 `json:"output_per_million"`
-	CacheCreationPerMillion float64 `json:"cache_creation_per_million,omitempty"`
-	CacheReadPerMillion     float64 `json:"cache_read_per_million,omitempty"`
-	FlatPerImage            float64 `json:"flat_per_image,omitempty"`
-	MaxInputTokens          int64   `json:"max_input_tokens,omitempty"`
+	InputPerMillion            float64            `json:"input_per_million"`
+	OutputPerMillion           float64            `json:"output_per_million"`
+	CacheCreationPerMillion    float64            `json:"cache_creation_per_million,omitempty"`
+	CacheReadPerMillion        float64            `json:"cache_read_per_million,omitempty"`
+	FlatPerImage               float64            `json:"flat_per_image,omitempty"`
+	MaxInputTokens             int64              `json:"max_input_tokens,omitempty"`
 	PerVideoSecond             float64            `json:"per_video_second,omitempty"`
 	PerVideoSecondByResolution map[string]float64 `json:"per_video_second_by_resolution,omitempty"`
 	ImageOutputPerMillion      float64            `json:"image_output_per_million,omitempty"`
 	VideoOutputPerMillion      float64            `json:"video_output_per_million,omitempty"`
+	// TTSPerMillionChars prices text-to-speech by input character; the
+	// speech endpoint returns no usage, so characters are the only signal.
+	TTSPerMillionChars float64 `json:"tts_per_million_chars,omitempty"`
+}
+
+// IsTTSModel reports whether model is priced per character of speech input.
+func IsTTSModel(model string) bool {
+	p, ok := pricingTable[model]
+	return ok && p.TTSPerMillionChars > 0
 }
 
 // IsVideoModel reports whether model is priced per second of video.
@@ -135,6 +144,24 @@ func EstimateVideoCostByTokens(model string, inputTokens, videoOutputTokens int)
 		cost += float64(inputTokens) * p.InputPerMillion / 1_000_000
 	}
 	return cost
+}
+
+// EstimateTTSCost prices a speech synthesis from its input character count.
+// Unknown models are recorded as 0 (and reported via the unknown-model
+// hook), like EstimateCostFull.
+func EstimateTTSCost(model string, chars int) float64 {
+	p, ok := pricingTable[model]
+	if !ok {
+		logger.Warn("unknown tts model — cost recorded as 0", zap.String("model", model), zap.Int("chars", chars))
+		if unknownModelHook != nil {
+			unknownModelHook(model)
+		}
+		return 0
+	}
+	if p.TTSPerMillionChars <= 0 || chars <= 0 {
+		return 0
+	}
+	return float64(chars) * p.TTSPerMillionChars / 1_000_000
 }
 
 // EstimateImageCostByTokens prices an image generation from output tokens.

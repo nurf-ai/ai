@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -425,6 +426,39 @@ func TestOpenAI_Integration(t *testing.T) {
 		} else {
 			t.Log("stt: ok")
 		}
+	})
+
+	t.Run("TTS", func(t *testing.T) {
+		t.Parallel()
+		tts := newOpenAITTSProvider(key, "")
+		tts.SetMeter(newCostTracker(t))
+		synth := func(format string) []byte {
+			rc, err := tts.Synthesize(ctx, TTSRequest{Text: "hello from nurf", Format: format})
+			if err != nil {
+				t.Fatalf("tts %s: %v", format, err)
+			}
+			defer rc.Close()
+			audio, err := io.ReadAll(rc)
+			if err != nil {
+				t.Fatalf("tts %s read: %v", format, err)
+			}
+			if len(audio) < 64 {
+				t.Fatalf("tts %s: %d bytes, expected audio", format, len(audio))
+			}
+			return audio
+		}
+		mp3 := synth("")
+		if !(string(mp3[:3]) == "ID3" || (mp3[0] == 0xFF && mp3[1]&0xE0 == 0xE0)) {
+			t.Fatalf("mp3: bad magic % x", mp3[:4])
+		}
+		wav := synth("wav")
+		if string(wav[:4]) != "RIFF" || string(wav[8:12]) != "WAVE" {
+			t.Fatalf("wav: bad magic % x", wav[:12])
+		}
+		if _, err := tts.Synthesize(ctx, TTSRequest{Text: strings.Repeat("a", openAITTSMaxChars+1)}); err == nil {
+			t.Fatal("expected error above the char cap")
+		}
+		t.Logf("tts: mp3 %d bytes, wav %d bytes", len(mp3), len(wav))
 	})
 
 	t.Run("Moderation", func(t *testing.T) {
