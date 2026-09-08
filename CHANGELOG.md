@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/nurf-ai/ai/compare/v0.7.1...v0.7.2) (2026-09-08)
+
+
+### Bug Fixes
+
+* **errors:** a spent account is not a rate limit, and viewers are told neither ([eddc5fd](https://github.com/nurf-ai/ai/commit/eddc5fdaf07165f3cc6a7cc4a4a56d9e0fc0e572))
+
 ## [0.7.1](https://github.com/nurf-ai/ai/compare/v0.7.0...v0.7.1) (2026-09-06)
 
 
