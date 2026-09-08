@@ -242,7 +242,7 @@
       "audio_output_per_million": 80.0,
       "max_input_tokens": 128000
     },
-    "gpt-realtime-2-mini": {
+    "gpt-realtime-2.1-mini": {
       "input_per_million": 0.60,
       "output_per_million": 2.40,
       "audio_input_per_million": 10.0,

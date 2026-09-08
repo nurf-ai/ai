@@ -57,7 +57,6 @@ func (p *OpenAIRealtimeProvider) Connect(ctx context.Context, cfg RealtimeSessio
 
 	header := http.Header{
 		"Authorization": []string{"Bearer " + p.apiKey},
-		"OpenAI-Beta":   []string{"realtime=v1"},
 	}
 
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, header)
@@ -182,21 +181,12 @@ func (p *OpenAIRealtimeProvider) CancelResponse() error {
 // --- session config ---
 
 func (p *OpenAIRealtimeProvider) sendSessionUpdate(cfg RealtimeSessionConfig) error {
-	session := map[string]any{}
-	if cfg.Voice != "" {
-		session["voice"] = cfg.Voice
-	}
+	session := map[string]any{"type": "realtime"}
 	if cfg.Instructions != "" {
 		session["instructions"] = cfg.Instructions
 	}
 	if cfg.Temperature > 0 {
 		session["temperature"] = cfg.Temperature
-	}
-	if cfg.InputAudioFormat != "" {
-		session["input_audio_format"] = cfg.InputAudioFormat
-	}
-	if cfg.OutputAudioFormat != "" {
-		session["output_audio_format"] = cfg.OutputAudioFormat
 	}
 	if len(cfg.Tools) > 0 {
 		tools := make([]map[string]any, len(cfg.Tools))
@@ -209,6 +199,20 @@ func (p *OpenAIRealtimeProvider) sendSessionUpdate(cfg RealtimeSessionConfig) er
 			}
 		}
 		session["tools"] = tools
+	}
+
+	// GA API nests audio config under session.audio.{input,output}.
+	audioInput := map[string]any{}
+	audioOutput := map[string]any{}
+
+	if cfg.InputAudioFormat != "" {
+		audioInput["format"] = map[string]any{"type": "audio/" + cfg.InputAudioFormat}
+	}
+	if cfg.OutputAudioFormat != "" {
+		audioOutput["format"] = map[string]any{"type": "audio/" + cfg.OutputAudioFormat}
+	}
+	if cfg.Voice != "" {
+		audioOutput["voice"] = cfg.Voice
 	}
 	if cfg.TurnDetection != nil {
 		td := map[string]any{"type": cfg.TurnDetection.Type}
@@ -224,16 +228,25 @@ func (p *OpenAIRealtimeProvider) sendSessionUpdate(cfg RealtimeSessionConfig) er
 		if cfg.TurnDetection.SilenceDurationMs > 0 {
 			td["silence_duration_ms"] = cfg.TurnDetection.SilenceDurationMs
 		}
-		session["turn_detection"] = td
+		audioInput["turn_detection"] = td
 	}
 	if cfg.InputAudioTranscription != nil {
-		session["input_audio_transcription"] = map[string]any{
+		audioInput["transcription"] = map[string]any{
 			"model": cfg.InputAudioTranscription.Model,
 		}
 	}
-	if len(session) == 0 {
-		return nil
+
+	audio := map[string]any{}
+	if len(audioInput) > 0 {
+		audio["input"] = audioInput
 	}
+	if len(audioOutput) > 0 {
+		audio["output"] = audioOutput
+	}
+	if len(audio) > 0 {
+		session["audio"] = audio
+	}
+
 	return p.send(map[string]any{
 		"type":    "session.update",
 		"session": session,

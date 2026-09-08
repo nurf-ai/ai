@@ -467,7 +467,7 @@ func TestRealtimeNotConnected(t *testing.T) {
 }
 
 func TestRealtimePricingCoverage(t *testing.T) {
-	for _, model := range []string{"gpt-realtime-2", "gpt-realtime-2-mini"} {
+	for _, model := range []string{"gpt-realtime-2", "gpt-realtime-2.1-mini"} {
 		if !IsRealtimeModel(model) {
 			t.Errorf("%s not recognized as realtime model", model)
 		}

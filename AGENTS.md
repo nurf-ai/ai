@@ -50,8 +50,12 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 1. Create `<provider>.go` implementing `LLMProvider`
 2. Add model entries to `models.json` (pricing + `max_input_tokens`)
 3. Register in `provider.go` (`NewLLMProvider` switch)
-4. Add a smoke test to `integration_test.go`
-5. Run both test suites before submitting
+4. Write unit tests (`<provider>_test.go`) — mock-based, no API keys
+5. Write integration tests in `integration_test.go` — real API calls exercising each capability
+6. Run unit tests: `go test ./...`
+7. Run integration tests and update the matrix: `go test -tags=integration -count=1 -json ./... | go run ./cmd/testmatrix`
+8. Paste the updated matrix into README between `<!-- testmatrix:start/end -->` markers
+9. PRs must include both passing unit tests and an updated capability matrix
 
 ### Adding a model
 

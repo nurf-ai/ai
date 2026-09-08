@@ -184,29 +184,30 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
-|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | ✓ |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | | |
-| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | ✓ | | | | | | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | | ✓ | | | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | | ✓ | ✓ | | | | |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | ✓ | ✓ | ✓ | | | |
-| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | ✓ | ✓ | |
-| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | ✓ | | |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | ✓ | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | ✓ | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | ✓ | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | — | — | |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Realtime | RT Tools | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | | | | | | | | | | | | ✗ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | | | | |
+| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | ✓ | | | | | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | | ✓ | | | | | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | | ✓ | ✓ | | | | | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | ✓ | ✓ | ✓ | | | | | |
+| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | ✓ | ✓ | | | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✗ | ✗ | | | | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✗ | ✗ | | ✗ | | | | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✗ | ✗ | | | | | | | | | | | | | | | | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | ✓ | | | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | ✓ | | | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | ✓ | | | |
+| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | ✓ | | | | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | ✓ | ✗ | | | |
+| OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | | | | | ✓ | ✓ | |
 
 <!-- testmatrix:end -->
 
