@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0](https://github.com/nurf-ai/ai/compare/v0.7.2...v0.8.0) (2026-09-08)
+
+
+### Features
+
+* add RealtimeProvider for OpenAI Realtime API ([a837650](https://github.com/nurf-ai/ai/commit/a8376508a2005304037101dc8201128be5488832))
+* add RealtimeProvider for OpenAI Realtime API (WebSocket voice) ([2fcd50e](https://github.com/nurf-ai/ai/commit/2fcd50e44b9508bce3f6caa7c2ad7110f3128e5f))
+
+
+### Bug Fixes
+
+* correct gpt-realtime-2 pricing ($4/$24/$32/$64) ([40134b6](https://github.com/nurf-ai/ai/commit/40134b6769d5c506ea651c629f06ee2d400555a2))
+* realtime GA API format, integration tests, matrix update ([1e20b27](https://github.com/nurf-ai/ai/commit/1e20b27d40b9bb99ed9f6083a9aa8167b765ba8b))
+* restore known-good matrix rows, reorder veo after gemini-omni ([9ec1881](https://github.com/nurf-ai/ai/commit/9ec188194470f205664bc0d91da80a95d961b6f6))
+
 ## [0.7.2](https://github.com/nurf-ai/ai/compare/v0.7.1...v0.7.2) (2026-09-08)
 
 
