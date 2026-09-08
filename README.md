@@ -186,7 +186,7 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 
 | Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Realtime | RT Tools | Caching |
 |----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | | | | | | | | | | | | ✗ |
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | | | ✓ |
 | OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
 | OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | | | |
 | OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | | | |
@@ -197,16 +197,16 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
 | Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | ✓ | ✓ | ✓ | | | | | |
 | Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | ✓ | ✓ | | | |
+| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | ✓ | | | | |
 | Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
 | Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✗ | ✗ | | | | | | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✗ | ✗ | | ✗ | | | | | | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✗ | ✗ | | | | | | | | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | |
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | ✓ | | | | |
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | ✓ | | | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | ✓ | | | |
-| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | ✓ | | | | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | ✓ | ✗ | | | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | — | — | | | |
 | OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | | | | | ✓ | ✓ | |
 
 <!-- testmatrix:end -->
