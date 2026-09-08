@@ -6,7 +6,9 @@ require (
 	github.com/567-labs/instructor-go v0.0.0-20251010171220-db2cc6c8bc4b
 	github.com/anthropics/anthropic-sdk-go v1.63.1
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/invopop/jsonschema v0.14.0
+	github.com/joho/godotenv v1.5.1
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/pkoukk/tiktoken-go-loader v0.0.2
 	github.com/sashabaranov/go-openai v1.42.0
@@ -35,8 +37,6 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/liushuangls/go-anthropic/v2 v2.16.1 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect

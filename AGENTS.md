@@ -1,6 +1,6 @@
 # AGENTS.md — ai
 
-Multi-provider, multi-modal Go AI library with realistic per-model cost tracking. Covers chat, streaming, structured output, image/video generation, speech-to-text, text-to-speech, embeddings, and moderation — with a smart routing engine that picks the cheapest available provider per request. Single `package ai`, module `github.com/nurf-ai/ai`.
+Multi-provider, multi-modal Go AI library with realistic per-model cost tracking. Covers chat, streaming, structured output, image/video generation, speech-to-text, text-to-speech, realtime voice, embeddings, and moderation — with a smart routing engine that picks the cheapest available provider per request. Single `package ai`, module `github.com/nurf-ai/ai`.
 
 ## Files
 
@@ -17,6 +17,8 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `openai_image_provider.go` | OpenAI image generation/editing |
 | `openai_stt_provider.go` | OpenAI speech-to-text |
 | `openai_tts_provider.go` | OpenAI text-to-speech (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) |
+| `realtime_provider.go` | `RealtimeProvider` interface, session config types, event types |
+| `openai_realtime_provider.go` | OpenAI Realtime API WebSocket client (`gpt-realtime-2`, `gpt-realtime-2-mini`) |
 | `fal.go` | fal.ai queue client (`FalClient`: submit / status / result / cancel / run) |
 | `fal_video_provider.go` | fal video generation (LTX-2.3 image/text-to-video) |
 | `minimax_video_provider.go` | MiniMax direct API video generation (H3/H3-Max, async submit+poll) |
@@ -30,7 +32,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `tts_provider.go` | `TTSProvider` interface, `TTSRequest`, `SetTTSMeter`, `TTSMimeType` |
 | `moderation_provider.go` | `ModerationProvider` interface |
 | `meter.go` | Usage metering hooks, prompt block attribution |
-| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`) + context window lookup, loads `models.json` via `go:embed` |
+| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`, `EstimateRealtimeCost`) + context window lookup, loads `models.json` via `go:embed` |
 | `models.json` | Per-model pricing + context windows (single source of truth) |
 | `model_limits.go` | `MaxInputTokensLLM` helper, token counting |
 | `provider.go` | Provider registry, `NewLLMProvider` factory |
