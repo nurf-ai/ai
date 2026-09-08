@@ -236,10 +236,10 @@
       "tts_per_million_chars": 30.0
     },
     "gpt-realtime-2": {
-      "input_per_million": 5.0,
-      "output_per_million": 20.0,
-      "audio_input_per_million": 40.0,
-      "audio_output_per_million": 80.0,
+      "input_per_million": 4.0,
+      "output_per_million": 24.0,
+      "audio_input_per_million": 32.0,
+      "audio_output_per_million": 64.0,
       "max_input_tokens": 128000
     },
     "gpt-realtime-2.1-mini": {
