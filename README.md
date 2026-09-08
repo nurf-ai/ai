@@ -157,6 +157,42 @@ defer audio.Close()
 io.Copy(w, audio)
 ```
 
+### Realtime Voice
+
+Bidirectional WebSocket session for conversational voice. Streams audio in and out, supports tool calling mid-conversation, and reports per-response usage with text+audio token breakdown.
+
+```go
+rt, _ := ai.NewRealtimeProvider("openai", apiKey, "gpt-realtime-2.1-mini")
+
+err := rt.Connect(ctx, ai.RealtimeSessionConfig{
+    Voice:        "alloy",
+    Instructions: "You are a helpful assistant.",
+    Tools:        []ai.Tool{{Name: "lookup", Description: "Look up a record", Parameters: schema}},
+})
+defer rt.Close()
+
+// send text (or audio via rt.SendAudio)
+rt.AddMessage("user", "What's the weather?")
+rt.CreateResponse()
+
+for ev := range rt.Recv() {
+    switch ev.Type {
+    case ai.RTAudioDelta:
+        speaker.Write(ev.Audio) // PCM16 24kHz mono
+    case ai.RTTextDelta:
+        fmt.Print(ev.Text)
+    case ai.RTToolCall:
+        result := handleTool(ev.ToolCall.Name, ev.ToolCall.Arguments)
+        rt.SendToolResult(ev.ToolCall.CallID, result)
+        rt.CreateResponse()
+    case ai.RTResponseDone:
+        log.Printf("tokens: %d in, %d out", ev.Usage.InputTokens, ev.Usage.OutputTokens)
+    }
+}
+```
+
+Models: `gpt-realtime-2` (full), `gpt-realtime-2.1-mini` (faster, cheaper). Server-side VAD is on by default — configure via `RealtimeSessionConfig.TurnDetection`.
+
 ### Metering & Pricing
 
 ```go
@@ -178,6 +214,7 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
 | `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
 | `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
+| `NewRealtimeProvider(provider, apiKey, model)` | openai | Realtime voice (WebSocket, bidirectional audio + tool calls) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
 Each ✓ means the integration test passes, ✗ means it fails, and — means it hasn't been run yet:
