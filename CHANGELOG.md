@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/nurf-ai/ai/compare/v0.9.2...v0.9.3) (2026-09-09)
+
+
+### Bug Fixes
+
+* handle GA realtime event names, surface caller transcript ([c4a147f](https://github.com/nurf-ai/ai/commit/c4a147f52e3b9c9291c2665bd5a010bf0d0a52ea))
+
 ## [0.9.2](https://github.com/nurf-ai/ai/compare/v0.9.1...v0.9.2) (2026-09-09)
 
 
