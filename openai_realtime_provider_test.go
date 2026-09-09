@@ -82,7 +82,6 @@ func TestRealtimeConnect(t *testing.T) {
 	err := p.Connect(context.Background(), RealtimeSessionConfig{
 		Voice:        "coral",
 		Instructions: "you are helpful",
-		Temperature:  0.8,
 	})
 	if err != nil {
 		t.Fatalf("connect: %v", err)

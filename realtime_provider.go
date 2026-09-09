@@ -53,7 +53,6 @@ type RealtimeSessionConfig struct {
 	Model                   string
 	Voice                   string
 	Instructions            string
-	Temperature             float64
 	Tools                   []Tool
 	InputAudioFormat        string // pcm16 (default), g711_ulaw, g711_alaw
 	OutputAudioFormat       string

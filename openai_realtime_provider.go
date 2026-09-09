@@ -185,9 +185,6 @@ func (p *OpenAIRealtimeProvider) sendSessionUpdate(cfg RealtimeSessionConfig) er
 	if cfg.Instructions != "" {
 		session["instructions"] = cfg.Instructions
 	}
-	if cfg.Temperature > 0 {
-		session["temperature"] = cfg.Temperature
-	}
 	if len(cfg.Tools) > 0 {
 		tools := make([]map[string]any, len(cfg.Tools))
 		for i, t := range cfg.Tools {
