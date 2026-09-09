@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/nurf-ai/ai/compare/v0.9.0...v0.9.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* remove Temperature from RealtimeSessionConfig ([974ac60](https://github.com/nurf-ai/ai/commit/974ac608157604853c81a3490af9384fbf5d7607))
+
 ## [0.9.0](https://github.com/nurf-ai/ai/compare/v0.8.0...v0.9.0) (2026-09-09)
 
 
