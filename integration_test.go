@@ -517,9 +517,13 @@ func TestRealtime_Integration(t *testing.T) {
 		p := NewOpenAIRealtimeProvider(key, "gpt-realtime-2.1-mini")
 		p.SetMeter(newCostTracker(t))
 
+		// Formats are set explicitly so the live API validates the audio
+		// format wire shape — the beta names are rejected by the GA API.
 		err := p.Connect(ctx, RealtimeSessionConfig{
-			Voice:        "coral",
-			Instructions: "respond in exactly one short sentence",
+			Voice:             "coral",
+			Instructions:      "respond in exactly one short sentence",
+			InputAudioFormat:  "pcm16",
+			OutputAudioFormat: "pcm16",
 		})
 		if err != nil {
 			t.Fatalf("connect: %v", err)

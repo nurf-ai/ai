@@ -15,6 +15,10 @@ import (
 const (
 	openaiRealtimeURL     = "wss://api.openai.com/v1/realtime"
 	openaiRealtimeDefault = "gpt-realtime-2"
+
+	// rtPCMSampleRate is the sample rate the GA Realtime API expects for
+	// raw 16-bit PCM (audio/pcm) in both directions.
+	rtPCMSampleRate = 24000
 )
 
 // OpenAIRealtimeProvider implements RealtimeProvider over OpenAI's Realtime
@@ -202,11 +206,11 @@ func (p *OpenAIRealtimeProvider) sendSessionUpdate(cfg RealtimeSessionConfig) er
 	audioInput := map[string]any{}
 	audioOutput := map[string]any{}
 
-	if cfg.InputAudioFormat != "" {
-		audioInput["format"] = map[string]any{"type": "audio/" + cfg.InputAudioFormat}
+	if f := rtAudioFormat(cfg.InputAudioFormat); f != nil {
+		audioInput["format"] = f
 	}
-	if cfg.OutputAudioFormat != "" {
-		audioOutput["format"] = map[string]any{"type": "audio/" + cfg.OutputAudioFormat}
+	if f := rtAudioFormat(cfg.OutputAudioFormat); f != nil {
+		audioOutput["format"] = f
 	}
 	if cfg.Voice != "" {
 		audioOutput["voice"] = cfg.Voice
@@ -248,6 +252,26 @@ func (p *OpenAIRealtimeProvider) sendSessionUpdate(cfg RealtimeSessionConfig) er
 		"type":    "session.update",
 		"session": session,
 	})
+}
+
+// rtAudioFormat maps a RealtimeSessionConfig audio format name onto the GA
+// Realtime audio format object. The GA API only accepts the MIME-style names
+// "audio/pcm", "audio/pcmu" and "audio/pcma" — the beta names ("pcm16",
+// "g711_ulaw", "g711_alaw") are still accepted here as input. Returns nil for
+// an empty name so the caller can leave the field off entirely.
+func rtAudioFormat(name string) map[string]any {
+	switch name {
+	case "":
+		return nil
+	case "pcm16", "pcm", "audio/pcm":
+		return map[string]any{"type": "audio/pcm", "rate": rtPCMSampleRate}
+	case "g711_ulaw", "pcmu", "audio/pcmu":
+		return map[string]any{"type": "audio/pcmu"}
+	case "g711_alaw", "pcma", "audio/pcma":
+		return map[string]any{"type": "audio/pcma"}
+	default:
+		return map[string]any{"type": name}
+	}
 }
 
 // --- read/write loops ---

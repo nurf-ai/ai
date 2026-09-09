@@ -50,11 +50,14 @@ type RealtimeUsage struct {
 
 // RealtimeSessionConfig configures a realtime session.
 type RealtimeSessionConfig struct {
-	Model                   string
-	Voice                   string
-	Instructions            string
-	Tools                   []Tool
-	InputAudioFormat        string // pcm16 (default), g711_ulaw, g711_alaw
+	Model        string
+	Voice        string
+	Instructions string
+	Tools        []Tool
+	// InputAudioFormat / OutputAudioFormat name the PCM encoding. Accepts the
+	// beta names (pcm16, g711_ulaw, g711_alaw) or the GA MIME names (pcm, pcmu,
+	// pcma); both are mapped onto the GA wire format. Empty = provider default.
+	InputAudioFormat        string
 	OutputAudioFormat       string
 	TurnDetection           *RealtimeTurnDetection
 	InputAudioTranscription *RealtimeTranscriptionConfig
