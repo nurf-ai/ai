@@ -329,7 +329,7 @@ func (p *OpenAIRealtimeProvider) writeLoop(ctx context.Context) {
 
 func (p *OpenAIRealtimeProvider) parseEvent(typ string, raw []byte) *RealtimeEvent {
 	switch typ {
-	case "response.audio.delta":
+	case "response.output_audio.delta", "response.audio.delta":
 		var ev struct {
 			Delta      string `json:"delta"`
 			ResponseID string `json:"response_id"`
@@ -344,7 +344,7 @@ func (p *OpenAIRealtimeProvider) parseEvent(typ string, raw []byte) *RealtimeEve
 		}
 		return &RealtimeEvent{Type: RTAudioDelta, Audio: audio, ResponseID: ev.ResponseID, ItemID: ev.ItemID}
 
-	case "response.audio.done":
+	case "response.output_audio.done", "response.audio.done":
 		var ev struct {
 			ResponseID string `json:"response_id"`
 			ItemID     string `json:"item_id"`
@@ -354,7 +354,7 @@ func (p *OpenAIRealtimeProvider) parseEvent(typ string, raw []byte) *RealtimeEve
 		}
 		return &RealtimeEvent{Type: RTAudioDone, ResponseID: ev.ResponseID, ItemID: ev.ItemID}
 
-	case "response.text.delta":
+	case "response.output_text.delta", "response.text.delta":
 		var ev struct {
 			Delta      string `json:"delta"`
 			ResponseID string `json:"response_id"`
@@ -365,7 +365,7 @@ func (p *OpenAIRealtimeProvider) parseEvent(typ string, raw []byte) *RealtimeEve
 		}
 		return &RealtimeEvent{Type: RTTextDelta, Text: ev.Delta, ResponseID: ev.ResponseID, ItemID: ev.ItemID}
 
-	case "response.text.done":
+	case "response.output_text.done", "response.text.done":
 		var ev struct {
 			Text       string `json:"text"`
 			ResponseID string `json:"response_id"`
@@ -376,7 +376,7 @@ func (p *OpenAIRealtimeProvider) parseEvent(typ string, raw []byte) *RealtimeEve
 		}
 		return &RealtimeEvent{Type: RTTextDone, Text: ev.Text, ResponseID: ev.ResponseID, ItemID: ev.ItemID}
 
-	case "response.audio_transcript.delta":
+	case "response.output_audio_transcript.delta", "response.audio_transcript.delta":
 		var ev struct {
 			Delta      string `json:"delta"`
 			ResponseID string `json:"response_id"`
@@ -386,6 +386,37 @@ func (p *OpenAIRealtimeProvider) parseEvent(typ string, raw []byte) *RealtimeEve
 			return nil
 		}
 		return &RealtimeEvent{Type: RTTranscript, Text: ev.Delta, ResponseID: ev.ResponseID, ItemID: ev.ItemID}
+
+	case "response.output_audio_transcript.done", "response.audio_transcript.done":
+		var ev struct {
+			Transcript string `json:"transcript"`
+			ResponseID string `json:"response_id"`
+			ItemID     string `json:"item_id"`
+		}
+		if json.Unmarshal(raw, &ev) != nil {
+			return nil
+		}
+		return &RealtimeEvent{Type: RTTranscriptDone, Text: ev.Transcript, ResponseID: ev.ResponseID, ItemID: ev.ItemID}
+
+	case "conversation.item.input_audio_transcription.delta":
+		var ev struct {
+			Delta  string `json:"delta"`
+			ItemID string `json:"item_id"`
+		}
+		if json.Unmarshal(raw, &ev) != nil {
+			return nil
+		}
+		return &RealtimeEvent{Type: RTInputTranscriptDelta, Text: ev.Delta, ItemID: ev.ItemID}
+
+	case "conversation.item.input_audio_transcription.completed":
+		var ev struct {
+			Transcript string `json:"transcript"`
+			ItemID     string `json:"item_id"`
+		}
+		if json.Unmarshal(raw, &ev) != nil {
+			return nil
+		}
+		return &RealtimeEvent{Type: RTInputTranscript, Text: ev.Transcript, ItemID: ev.ItemID}
 
 	case "response.function_call_arguments.done":
 		var ev struct {
@@ -444,12 +475,12 @@ func (p *OpenAIRealtimeProvider) parseResponseDone(raw []byte) *RealtimeEvent {
 		ResponseID string `json:"response_id"`
 		Response   struct {
 			Usage struct {
-				InputTokens  int `json:"input_tokens"`
-				OutputTokens int `json:"output_tokens"`
+				InputTokens       int `json:"input_tokens"`
+				OutputTokens      int `json:"output_tokens"`
 				InputTokenDetails struct {
-					TextTokens    int `json:"text_tokens"`
-					AudioTokens   int `json:"audio_tokens"`
-					CachedTokens  int `json:"cached_tokens"`
+					TextTokens   int `json:"text_tokens"`
+					AudioTokens  int `json:"audio_tokens"`
+					CachedTokens int `json:"cached_tokens"`
 				} `json:"input_token_details"`
 				OutputTokenDetails struct {
 					TextTokens  int `json:"text_tokens"`
@@ -486,11 +517,11 @@ func (p *OpenAIRealtimeProvider) parseResponseDone(raw []byte) *RealtimeEvent {
 			TotalTokens:      u.TotalTokens,
 			EstimatedCostUSD: EstimateRealtimeCost(p.model, textIn, textOut, audioIn, audioOut),
 			Metadata: map[string]any{
-				"type":              "realtime",
-				"audio_input_tok":   audioIn,
-				"audio_output_tok":  audioOut,
-				"text_input_tok":    textIn,
-				"text_output_tok":   textOut,
+				"type":             "realtime",
+				"audio_input_tok":  audioIn,
+				"audio_output_tok": audioOut,
+				"text_input_tok":   textIn,
+				"text_output_tok":  textOut,
 			},
 		})
 	}

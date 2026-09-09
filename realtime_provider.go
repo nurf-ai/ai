@@ -8,16 +8,24 @@ import (
 
 // Realtime event types emitted on RealtimeProvider.Recv().
 const (
-	RTAudioDelta    = "audio_delta"
-	RTAudioDone     = "audio_done"
-	RTTextDelta     = "text_delta"
-	RTTextDone      = "text_done"
-	RTTranscript    = "transcript"
-	RTToolCall      = "tool_call"
-	RTSpeechStarted = "speech_started"
-	RTSpeechStopped = "speech_stopped"
-	RTResponseDone  = "response_done"
-	RTError         = "error"
+	RTAudioDelta = "audio_delta"
+	RTAudioDone  = "audio_done"
+	RTTextDelta  = "text_delta"
+	RTTextDone   = "text_done"
+	// RTTranscript / RTTranscriptDone carry the assistant's spoken words as
+	// text. For an audio-only response these are the only text the model
+	// produces — RTTextDelta/RTTextDone fire only in the text modality.
+	RTTranscript     = "transcript"
+	RTTranscriptDone = "transcript_done"
+	// RTInputTranscriptDelta / RTInputTranscript carry the *caller's* speech,
+	// transcribed by the input transcription model.
+	RTInputTranscriptDelta = "input_transcript_delta"
+	RTInputTranscript      = "input_transcript"
+	RTToolCall             = "tool_call"
+	RTSpeechStarted        = "speech_started"
+	RTSpeechStopped        = "speech_stopped"
+	RTResponseDone         = "response_done"
+	RTError                = "error"
 )
 
 // RealtimeEvent is a decoded server event from a realtime session.
