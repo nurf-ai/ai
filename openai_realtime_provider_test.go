@@ -489,8 +489,14 @@ func TestRealtimeSessionUpdateAudioFormat(t *testing.T) {
 	}{
 		{"pcm16", "pcm16", "audio/pcm", float64(rtPCMSampleRate)},
 		{"pcm", "pcm", "audio/pcm", float64(rtPCMSampleRate)},
+		{"audio/pcm", "audio/pcm", "audio/pcm", float64(rtPCMSampleRate)},
 		{"g711_ulaw", "g711_ulaw", "audio/pcmu", nil},
+		{"pcmu", "pcmu", "audio/pcmu", nil},
+		{"audio/pcmu", "audio/pcmu", "audio/pcmu", nil},
 		{"g711_alaw", "g711_alaw", "audio/pcma", nil},
+		{"pcma", "pcma", "audio/pcma", nil},
+		{"audio/pcma", "audio/pcma", "audio/pcma", nil},
+		{"passthrough", "custom/format", "custom/format", nil},
 	}
 
 	for _, tc := range cases {
