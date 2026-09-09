@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.2](https://github.com/nurf-ai/ai/compare/v0.9.1...v0.9.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* realtime GA audio format wire shape ([c71dc6f](https://github.com/nurf-ai/ai/commit/c71dc6f85768270c28056d9a5d6b39b9807b49ee))
+* realtime GA audio format wire shape ([c02dfa0](https://github.com/nurf-ai/ai/commit/c02dfa07a9d7e0fec502a618e97716c9596179f4))
+
 ## [0.9.1](https://github.com/nurf-ai/ai/compare/v0.9.0...v0.9.1) (2026-09-09)
 
 
