@@ -10,7 +10,7 @@
 
 <p align="center">Multimodal Go module for building across AI providers, with realistic cost tracking baked in, not just token counts.</p>
 
-<p align="center"><sub>From the obvious to the overlooked: chat, reasoning, tool use, structured output, image gen & editing, video gen, speech-to-text, text-to-speech, embeddings, moderation.</sub></p>
+<p align="center"><sub>From the obvious to the overlooked: chat, streaming, reasoning, tool use, structured output, embeddings, speech-to-text, text-to-speech, sound effects, music generation, realtime voice, moderation, image gen & editing, video gen.</sub></p>
 
 ## Install
 
