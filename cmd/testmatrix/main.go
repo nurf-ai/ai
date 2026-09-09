@@ -48,14 +48,16 @@ var columns = []column{
 	{"Embeddings", "Embeddings"},
 	{"STT", "STT"},
 	{"TTS", "TTS"},
+	{"TTSFX", "TTSFX"},
+	{"TTMusic", "TTMusic"},
+	{"RT Voice", "TextRoundtrip"},
+	{"RT Voice Tools", "ToolCall"},
 	{"Moderation", "Moderation"},
 	{"Image Gen", "ImageGenerate"},
 	{"Img Edit", "ImageEdit"},
 	{"Img Edit Ref", "ImageEditWithReference"},
 	{"Txt2Vid", "TextToVideo"},
 	{"Img2Vid", "VideoGenerate"},
-	{"Realtime", "TextRoundtrip"},
-	{"RT Tools", "ToolCall"},
 	{"Caching", "PromptCaching"},
 }
 
@@ -67,6 +69,8 @@ var leafSubtests = func() map[string]bool {
 	m["StreamWithChan"] = true
 	m["VideoGenerate_MinimaxH3Max"] = true
 	m["ImageToVideo"] = true
+	m["TTSFX"] = true
+	m["TTMusic"] = true
 	m["TextRoundtrip"] = true
 	m["ToolCall"] = true
 	return m
@@ -100,6 +104,7 @@ var rows = []row{
 	{provider: "OpenAI", model: "text-embedding-3-small", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Embeddings": true}},
 	{provider: "OpenAI", model: "whisper-1", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"STT": true}},
 	{provider: "OpenAI", model: "gpt-4o-mini-tts", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"TTS": true}},
+	{provider: "OpenAI", model: "gpt-realtime-2.1-mini", testPrefix: "TestRealtime_Integration", only: map[string]bool{"TextRoundtrip": true, "ToolCall": true}},
 	{provider: "OpenAI", model: "omni-moderation-latest", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Moderation": true}},
 	{provider: "OpenAI", model: "gpt-image-1", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
 	{provider: "Gemini", model: "gemini-3.6-flash", testPrefix: "TestGemini_Integration", only: chatCaps},
@@ -111,11 +116,12 @@ var rows = []row{
 	{provider: "Ollama", model: "qwen3.5:0.8b", testPrefix: "TestOllama_Integration/qwen3.5:0.8b"},
 	{provider: "Ollama", model: "gpt-oss:20b", testPrefix: "TestOllama_Integration/gpt-oss:20b"},
 	{provider: "Ollama", model: "gemma4:e4b", testPrefix: "TestOllama_Integration/gemma4:e4b"},
+	{provider: "fal", model: "sonilo/v1.1", testPrefix: "TestFalAudio_Integration", only: map[string]bool{"TTSFX": true}},
+	{provider: "fal", model: "sonilo/v1.1/music", testPrefix: "TestFalAudio_Integration", only: map[string]bool{"TTMusic": true}},
 	{provider: "fal", model: "ltx-2.3/t2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"TextToVideo": true}},
 	{provider: "fal", model: "ltx-2.3/i2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}},
 	{provider: "fal", model: "minimax/h3-max/i2v", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "VideoGenerate_MinimaxH3Max"}},
 	{provider: "MiniMax", model: "MiniMax-H3", testPrefix: "TestMinimaxVideo_Integration", only: map[string]bool{"TextToVideo": true, "VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "ImageToVideo"}},
-	{provider: "OpenAI", model: "gpt-realtime-2.1-mini", testPrefix: "TestRealtime_Integration", only: map[string]bool{"TextRoundtrip": true, "ToolCall": true}},
 }
 
 var parentToProvider = map[string]string{
@@ -125,6 +131,7 @@ var parentToProvider = map[string]string{
 	"TestGeminiVideo_Integration":   "Gemini",
 	"TestHuggingFace_Integration":   "HuggingFace",
 	"TestOllama_Integration":        "Ollama",
+	"TestFalAudio_Integration":      "fal",
 	"TestFal_Integration":           "fal",
 	"TestMinimaxVideo_Integration":  "MiniMax",
 	"TestVeoVideo_Integration":      "Gemini",

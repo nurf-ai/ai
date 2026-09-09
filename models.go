@@ -38,6 +38,8 @@ type modelPricing struct {
 	// realtime (voice) models separately from text tokens.
 	AudioInputPerMillion  float64 `json:"audio_input_per_million,omitempty"`
 	AudioOutputPerMillion float64 `json:"audio_output_per_million,omitempty"`
+	// PerAudioSecond prices sound-effect generation by output duration.
+	PerAudioSecond float64 `json:"per_audio_second,omitempty"`
 }
 
 // IsTTSModel reports whether model is priced per character of speech input.
@@ -184,6 +186,29 @@ func EstimateRealtimeCost(model string, textIn, textOut, audioIn, audioOut int) 
 		float64(textOut)*p.OutputPerMillion +
 		float64(audioIn)*p.AudioInputPerMillion +
 		float64(audioOut)*p.AudioOutputPerMillion) / 1_000_000
+}
+
+// EstimateAudioCost prices a sound-effect generation from its output
+// duration. Unknown models are recorded as 0.
+func EstimateAudioCost(model string, seconds float64) float64 {
+	p, ok := pricingTable[model]
+	if !ok {
+		logger.Warn("unknown audio model — cost recorded as 0", zap.String("model", model), zap.Float64("seconds", seconds))
+		if unknownModelHook != nil {
+			unknownModelHook(model)
+		}
+		return 0
+	}
+	if p.PerAudioSecond <= 0 || seconds <= 0 {
+		return 0
+	}
+	return p.PerAudioSecond * seconds
+}
+
+// IsAudioModel reports whether model is priced per second of audio output.
+func IsAudioModel(model string) bool {
+	p, ok := pricingTable[model]
+	return ok && p.PerAudioSecond > 0
 }
 
 // IsRealtimeModel reports whether model has audio token pricing.

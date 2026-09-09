@@ -30,6 +30,8 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `image_provider.go` | `ImageProvider` interface |
 | `stt_provider.go` | `STTProvider` interface |
 | `tts_provider.go` | `TTSProvider` interface, `TTSRequest`, `SetTTSMeter`, `TTSMimeType` |
+| `audio_provider.go` | `AudioProvider` interface, `AudioRequest`, `AudioResult`, `SetAudioMeter` |
+| `fal_audio_provider.go` | fal audio generation (Sonilo TTSFX + TTMusic, async queue) |
 | `moderation_provider.go` | `ModerationProvider` interface |
 | `meter.go` | Usage metering hooks, prompt block attribution |
 | `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`, `EstimateRealtimeCost`) + context window lookup, loads `models.json` via `go:embed` |
