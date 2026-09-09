@@ -476,3 +476,131 @@ func TestRealtimePricingCoverage(t *testing.T) {
 		}
 	}
 }
+
+// TestRealtimeSessionUpdateAudioFormat pins the GA audio format wire shape:
+// the API rejects the beta names ("pcm16"), only accepting audio/pcm,
+// audio/pcmu and audio/pcma.
+func TestRealtimeSessionUpdateAudioFormat(t *testing.T) {
+	cases := []struct {
+		name     string
+		in       string
+		wantType string
+		wantRate any
+	}{
+		{"pcm16", "pcm16", "audio/pcm", float64(rtPCMSampleRate)},
+		{"pcm", "pcm", "audio/pcm", float64(rtPCMSampleRate)},
+		{"audio/pcm", "audio/pcm", "audio/pcm", float64(rtPCMSampleRate)},
+		{"g711_ulaw", "g711_ulaw", "audio/pcmu", nil},
+		{"pcmu", "pcmu", "audio/pcmu", nil},
+		{"audio/pcmu", "audio/pcmu", "audio/pcmu", nil},
+		{"g711_alaw", "g711_alaw", "audio/pcma", nil},
+		{"pcma", "pcma", "audio/pcma", nil},
+		{"audio/pcma", "audio/pcma", "audio/pcma", nil},
+		{"passthrough", "custom/format", "custom/format", nil},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			updates := make(chan map[string]any, 1)
+			srv := startRealtimeTestServer(t, func(conn *websocket.Conn) {
+				_ = conn.WriteJSON(map[string]any{"type": "session.created"})
+				for {
+					_, msg, err := conn.ReadMessage()
+					if err != nil {
+						return
+					}
+					var ev map[string]any
+					_ = json.Unmarshal(msg, &ev)
+					if ev["type"] == "session.update" {
+						select {
+						case updates <- ev:
+						default:
+						}
+						_ = conn.WriteJSON(map[string]any{"type": "session.updated"})
+					}
+				}
+			})
+
+			p := NewOpenAIRealtimeProvider("test-key", "gpt-realtime-2")
+			p.baseURL = wsURL(srv)
+			if err := p.Connect(context.Background(), RealtimeSessionConfig{
+				InputAudioFormat:  tc.in,
+				OutputAudioFormat: tc.in,
+			}); err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			defer func() { _ = p.Close() }()
+
+			var ev map[string]any
+			select {
+			case ev = <-updates:
+			case <-time.After(2 * time.Second):
+				t.Fatal("timeout waiting for session.update")
+			}
+
+			session, _ := ev["session"].(map[string]any)
+			audio, _ := session["audio"].(map[string]any)
+			for _, dir := range []string{"input", "output"} {
+				side, _ := audio[dir].(map[string]any)
+				format, ok := side["format"].(map[string]any)
+				if !ok {
+					t.Fatalf("%s: missing format object, got %#v", dir, side)
+				}
+				if format["type"] != tc.wantType {
+					t.Errorf("%s: type = %v, want %v", dir, format["type"], tc.wantType)
+				}
+				if got := format["rate"]; got != tc.wantRate {
+					t.Errorf("%s: rate = %v, want %v", dir, got, tc.wantRate)
+				}
+			}
+		})
+	}
+}
+
+// TestRealtimeSessionUpdateOmitsEmptyAudioFormat checks an unset format leaves
+// the field off entirely rather than sending "audio/".
+func TestRealtimeSessionUpdateOmitsEmptyAudioFormat(t *testing.T) {
+	updates := make(chan map[string]any, 1)
+	srv := startRealtimeTestServer(t, func(conn *websocket.Conn) {
+		_ = conn.WriteJSON(map[string]any{"type": "session.created"})
+		for {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			var ev map[string]any
+			_ = json.Unmarshal(msg, &ev)
+			if ev["type"] == "session.update" {
+				select {
+				case updates <- ev:
+				default:
+				}
+				_ = conn.WriteJSON(map[string]any{"type": "session.updated"})
+			}
+		}
+	})
+
+	p := NewOpenAIRealtimeProvider("test-key", "gpt-realtime-2")
+	p.baseURL = wsURL(srv)
+	if err := p.Connect(context.Background(), RealtimeSessionConfig{Voice: "coral"}); err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer func() { _ = p.Close() }()
+
+	var ev map[string]any
+	select {
+	case ev = <-updates:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for session.update")
+	}
+
+	session, _ := ev["session"].(map[string]any)
+	audio, _ := session["audio"].(map[string]any)
+	out, _ := audio["output"].(map[string]any)
+	if _, present := out["format"]; present {
+		t.Errorf("output format should be omitted when unset, got %#v", out["format"])
+	}
+	if _, present := audio["input"]; present {
+		t.Errorf("input audio block should be omitted entirely, got %#v", audio["input"])
+	}
+}
