@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0](https://github.com/nurf-ai/ai/compare/v0.8.0...v0.9.0) (2026-09-09)
+
+
+### Features
+
+* add AudioProvider interface + fal Sonilo TTSFX/TTMusic ([6015df9](https://github.com/nurf-ai/ai/commit/6015df9c150c5f2243c0859597192b03bb5e6f80))
+* add AudioProvider interface + fal Sonilo TTSFX/TTMusic ([4014f37](https://github.com/nurf-ai/ai/commit/4014f3711ad6d2a172b5e7df7b9e192acac0afc6))
+
 ## [0.8.0](https://github.com/nurf-ai/ai/compare/v0.7.2...v0.8.0) (2026-09-08)
 
 
