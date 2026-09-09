@@ -537,7 +537,7 @@ func TestRealtime_Integration(t *testing.T) {
 			t.Fatalf("create response: %v", err)
 		}
 
-		var gotText, gotDone bool
+		var gotText, gotDone, gotAudio, gotTranscript bool
 		timeout := time.After(30 * time.Second)
 		for !gotDone {
 			select {
@@ -548,8 +548,10 @@ func TestRealtime_Integration(t *testing.T) {
 				switch ev.Type {
 				case RTTextDelta, RTTranscript:
 					gotText = true
+					gotTranscript = true
 					t.Logf("delta: %q", ev.Text)
 				case RTAudioDelta:
+					gotAudio = true
 					t.Logf("audio chunk: %d bytes", len(ev.Audio))
 				case RTResponseDone:
 					gotDone = true
@@ -565,8 +567,18 @@ func TestRealtime_Integration(t *testing.T) {
 				t.Fatal("timeout waiting for response")
 			}
 		}
+		// The default modality is audio, so a healthy session yields audio
+		// deltas plus the assistant transcript. Asserting this is what catches
+		// beta/GA event-name drift: the renamed events fall through to the
+		// unhandled-event default and every delta silently disappears.
+		if !gotAudio {
+			t.Error("no audio deltas received — response.output_audio.delta not reaching the caller")
+		}
+		if !gotTranscript {
+			t.Error("no transcript deltas received — response.output_audio_transcript.delta not reaching the caller")
+		}
 		if !gotText {
-			t.Log("no text deltas received (audio-only response is valid)")
+			t.Log("no text-modality deltas (expected for an audio response)")
 		}
 	})
 
