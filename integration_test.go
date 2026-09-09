@@ -502,6 +502,134 @@ func TestOpenAI_Integration(t *testing.T) {
 	})
 }
 
+// --- Realtime ------------------------------------------------------------
+
+func TestRealtime_Integration(t *testing.T) {
+	key := os.Getenv("OPENAI_API_KEY")
+	if key == "" {
+		t.Skip("OPENAI_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("TextRoundtrip", func(t *testing.T) {
+		t.Parallel()
+		p := NewOpenAIRealtimeProvider(key, "gpt-realtime-2.1-mini")
+		p.SetMeter(newCostTracker(t))
+
+		err := p.Connect(ctx, RealtimeSessionConfig{
+			Voice:        "coral",
+			Instructions: "respond in exactly one short sentence",
+		})
+		if err != nil {
+			t.Fatalf("connect: %v", err)
+		}
+		defer func() { _ = p.Close() }()
+
+		if err := p.AddMessage("user", "say hi"); err != nil {
+			t.Fatalf("add message: %v", err)
+		}
+		if err := p.CreateResponse(); err != nil {
+			t.Fatalf("create response: %v", err)
+		}
+
+		var gotText, gotDone bool
+		timeout := time.After(30 * time.Second)
+		for !gotDone {
+			select {
+			case ev, ok := <-p.Recv():
+				if !ok {
+					t.Fatal("channel closed before response.done")
+				}
+				switch ev.Type {
+				case RTTextDelta, RTTranscript:
+					gotText = true
+					t.Logf("delta: %q", ev.Text)
+				case RTAudioDelta:
+					t.Logf("audio chunk: %d bytes", len(ev.Audio))
+				case RTResponseDone:
+					gotDone = true
+					if ev.Usage != nil {
+						t.Logf("usage: in=%d out=%d total=%d (audio_in=%d audio_out=%d)",
+							ev.Usage.InputTokens, ev.Usage.OutputTokens, ev.Usage.TotalTokens,
+							ev.Usage.InputAudioTokens, ev.Usage.OutputAudioTokens)
+					}
+				case RTError:
+					t.Fatalf("error event: %v", ev.Error)
+				}
+			case <-timeout:
+				t.Fatal("timeout waiting for response")
+			}
+		}
+		if !gotText {
+			t.Log("no text deltas received (audio-only response is valid)")
+		}
+	})
+
+	t.Run("ToolCall", func(t *testing.T) {
+		t.Parallel()
+		p := NewOpenAIRealtimeProvider(key, "gpt-realtime-2.1-mini")
+		p.SetMeter(newCostTracker(t))
+
+		err := p.Connect(ctx, RealtimeSessionConfig{
+			Voice:        "coral",
+			Instructions: "always use the ping tool before answering",
+			Tools: []Tool{{
+				Name:        "ping",
+				Description: "ping a host",
+				Parameters: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"host": map[string]any{"type": "string"},
+					},
+					"required": []string{"host"},
+				},
+			}},
+		})
+		if err != nil {
+			t.Fatalf("connect: %v", err)
+		}
+		defer func() { _ = p.Close() }()
+
+		if err := p.AddMessage("user", "ping google.com"); err != nil {
+			t.Fatalf("add message: %v", err)
+		}
+		if err := p.CreateResponse(); err != nil {
+			t.Fatalf("create response: %v", err)
+		}
+
+		timeout := time.After(30 * time.Second)
+		for {
+			select {
+			case ev, ok := <-p.Recv():
+				if !ok {
+					t.Fatal("channel closed")
+				}
+				switch ev.Type {
+				case RTToolCall:
+					t.Logf("tool call: %s(%s)", ev.ToolCall.Name, string(ev.ToolCall.Arguments))
+					if ev.ToolCall.Name != "ping" {
+						t.Fatalf("want ping, got %s", ev.ToolCall.Name)
+					}
+					if err := p.SendToolResult(ev.ToolCall.CallID, `{"latency_ms":12}`); err != nil {
+						t.Fatalf("send tool result: %v", err)
+					}
+					if err := p.CreateResponse(); err != nil {
+						t.Fatalf("create response: %v", err)
+					}
+				case RTResponseDone:
+					t.Log("response done")
+					return
+				case RTError:
+					t.Fatalf("error: %v", ev.Error)
+				}
+			case <-timeout:
+				t.Fatal("timeout")
+			}
+		}
+	})
+}
+
 // --- Gemini --------------------------------------------------------------
 
 func TestGemini_Integration(t *testing.T) {
@@ -876,7 +1004,59 @@ func TestOllama_Integration(t *testing.T) {
 	}
 }
 
-// --- fal ------------------------------------------------------------------
+// --- fal audio ------------------------------------------------------------
+
+func TestFalAudio_Integration(t *testing.T) {
+	key := os.Getenv("FAL_API_KEY")
+	if key == "" {
+		t.Skip("FAL_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("TTSFX", func(t *testing.T) {
+		t.Parallel()
+		p := NewFalAudioProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, AudioRequest{
+			Prompt:   "a short door bell chime",
+			Duration: 3,
+			Format:   "aac",
+		})
+		if err != nil {
+			t.Fatalf("audio generate: %v", err)
+		}
+		if res.URL == "" || !strings.HasPrefix(res.URL, "http") {
+			t.Fatalf("expected a hosted audio url, got %q", res.URL)
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("audio: %s (%.1fs, $%.4f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+
+	t.Run("TTMusic", func(t *testing.T) {
+		t.Parallel()
+		p := NewFalAudioProvider(key, "sonilo/v1.1/text-to-music")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, AudioRequest{
+			Prompt:   "upbeat lo-fi hip hop beat with soft piano chords",
+			Duration: 10,
+		})
+		if err != nil {
+			t.Fatalf("music generate: %v", err)
+		}
+		if res.URL == "" || !strings.HasPrefix(res.URL, "http") {
+			t.Fatalf("expected a hosted audio url, got %q", res.URL)
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("music: %s (%.1fs, $%.4f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
+	})
+}
+
+// --- fal video ------------------------------------------------------------
 
 func TestFal_Integration(t *testing.T) {
 	key := os.Getenv("FAL_API_KEY")
@@ -1181,130 +1361,4 @@ func TestVeoVideo_Integration(t *testing.T) {
 	})
 
 	// Veo I2V requires an image URL (no inline bytes) — skip in automated tests.
-}
-
-func TestRealtime_Integration(t *testing.T) {
-	key := os.Getenv("OPENAI_API_KEY")
-	if key == "" {
-		t.Skip("OPENAI_API_KEY not set")
-	}
-	t.Parallel()
-	ctx := context.Background()
-
-	t.Run("TextRoundtrip", func(t *testing.T) {
-		t.Parallel()
-		p := NewOpenAIRealtimeProvider(key, "gpt-realtime-2.1-mini")
-		p.SetMeter(newCostTracker(t))
-
-		err := p.Connect(ctx, RealtimeSessionConfig{
-			Voice:        "coral",
-			Instructions: "respond in exactly one short sentence",
-		})
-		if err != nil {
-			t.Fatalf("connect: %v", err)
-		}
-		defer func() { _ = p.Close() }()
-
-		if err := p.AddMessage("user", "say hi"); err != nil {
-			t.Fatalf("add message: %v", err)
-		}
-		if err := p.CreateResponse(); err != nil {
-			t.Fatalf("create response: %v", err)
-		}
-
-		var gotText, gotDone bool
-		timeout := time.After(30 * time.Second)
-		for !gotDone {
-			select {
-			case ev, ok := <-p.Recv():
-				if !ok {
-					t.Fatal("channel closed before response.done")
-				}
-				switch ev.Type {
-				case RTTextDelta, RTTranscript:
-					gotText = true
-					t.Logf("delta: %q", ev.Text)
-				case RTAudioDelta:
-					t.Logf("audio chunk: %d bytes", len(ev.Audio))
-				case RTResponseDone:
-					gotDone = true
-					if ev.Usage != nil {
-						t.Logf("usage: in=%d out=%d total=%d (audio_in=%d audio_out=%d)",
-							ev.Usage.InputTokens, ev.Usage.OutputTokens, ev.Usage.TotalTokens,
-							ev.Usage.InputAudioTokens, ev.Usage.OutputAudioTokens)
-					}
-				case RTError:
-					t.Fatalf("error event: %v", ev.Error)
-				}
-			case <-timeout:
-				t.Fatal("timeout waiting for response")
-			}
-		}
-		if !gotText {
-			t.Log("no text deltas received (audio-only response is valid)")
-		}
-	})
-
-	t.Run("ToolCall", func(t *testing.T) {
-		t.Parallel()
-		p := NewOpenAIRealtimeProvider(key, "gpt-realtime-2.1-mini")
-		p.SetMeter(newCostTracker(t))
-
-		err := p.Connect(ctx, RealtimeSessionConfig{
-			Voice:        "coral",
-			Instructions: "always use the ping tool before answering",
-			Tools: []Tool{{
-				Name:        "ping",
-				Description: "ping a host",
-				Parameters: map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"host": map[string]any{"type": "string"},
-					},
-					"required": []string{"host"},
-				},
-			}},
-		})
-		if err != nil {
-			t.Fatalf("connect: %v", err)
-		}
-		defer func() { _ = p.Close() }()
-
-		if err := p.AddMessage("user", "ping google.com"); err != nil {
-			t.Fatalf("add message: %v", err)
-		}
-		if err := p.CreateResponse(); err != nil {
-			t.Fatalf("create response: %v", err)
-		}
-
-		timeout := time.After(30 * time.Second)
-		for {
-			select {
-			case ev, ok := <-p.Recv():
-				if !ok {
-					t.Fatal("channel closed")
-				}
-				switch ev.Type {
-				case RTToolCall:
-					t.Logf("tool call: %s(%s)", ev.ToolCall.Name, string(ev.ToolCall.Arguments))
-					if ev.ToolCall.Name != "ping" {
-						t.Fatalf("want ping, got %s", ev.ToolCall.Name)
-					}
-					if err := p.SendToolResult(ev.ToolCall.CallID, `{"latency_ms":12}`); err != nil {
-						t.Fatalf("send tool result: %v", err)
-					}
-					if err := p.CreateResponse(); err != nil {
-						t.Fatalf("create response: %v", err)
-					}
-				case RTResponseDone:
-					t.Log("response done")
-					return
-				case RTError:
-					t.Fatalf("error: %v", ev.Error)
-				}
-			case <-timeout:
-				t.Fatal("timeout")
-			}
-		}
-	})
 }

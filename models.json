@@ -368,6 +368,12 @@
     },
     "fal-ai/ltx-video": {
       "per_video_second": 0.004
+    },
+    "sonilo/v1.1/text-to-sound-effects": {
+      "per_audio_second": 0.0018
+    },
+    "sonilo/v1.1/text-to-music": {
+      "per_audio_second": 0.0025
     }
   },
   "minimax": {

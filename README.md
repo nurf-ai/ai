@@ -157,6 +157,28 @@ defer audio.Close()
 io.Copy(w, audio)
 ```
 
+### Sound Effects (TTSFX)
+
+```go
+sfx := ai.NewFalAudioProvider(apiKey, "") // default: sonilo/v1.1/text-to-sound-effects
+res, err := sfx.Generate(ctx, ai.AudioRequest{
+    Prompt:   "thunder crack followed by heavy rain",
+    Duration: 5,       // 1–180s, default 8
+    Format:   "aac",   // wav, mp3, aac (default), flac
+})
+// res.URL, res.Duration, res.CostUSD
+```
+
+### Music Generation (TTMusic)
+
+```go
+music := ai.NewFalAudioProvider(apiKey, "sonilo/v1.1/text-to-music")
+res, err := music.Generate(ctx, ai.AudioRequest{
+    Prompt:   "upbeat lo-fi hip hop beat with soft piano chords",
+    Duration: 30, // 1–600s, default 90; always AAC output
+})
+```
+
 ### Realtime Voice
 
 Bidirectional WebSocket session for conversational voice. Streams audio in and out, supports tool calling mid-conversation, and reports per-response usage with text+audio token breakdown.
@@ -203,7 +225,7 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 
 Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`, `ai.WithMeterMetadata(ctx, map[string]any{...})` — every provider merges stamped metadata into `UsageEvent.Metadata` (provider-set keys win).
 
-Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
+Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), `EstimateAudioCost` (per second of generated audio), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
 ## Providers
 
@@ -213,6 +235,7 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
 | `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
+| `NewFalAudioProvider(apiKey, model)` | fal | Sound effects & music generation (Sonilo) |
 | `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
 | `NewRealtimeProvider(provider, apiKey, model)` | openai | Realtime voice (WebSocket, bidirectional audio + tool calls) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
@@ -221,30 +244,32 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Realtime | RT Tools | Caching |
-|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | | | ✓ |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | | | | |
-| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | ✓ | | | | | | | | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | | ✓ | | | | | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | | ✓ | ✓ | | | | | | |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | ✓ | ✓ | ✓ | | | | | |
-| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | ✓ | ✓ | | | |
-| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | ✓ | | | | |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | ✓ | | | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | ✓ | | | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | ✓ | | | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | — | — | | | |
-| OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | | | | | ✓ | ✓ | |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | TTSFX | TTMusic | RT Voice | RT Voice Tools | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | | | | | ✓ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | | | | | | |
+| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | ✓ | | | | | | | | | | | |
+| OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | ✓ | ✓ | | | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | | | | | | ✓ | | | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | | | | | | ✓ | ✓ | | | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | | | | | ✓ | ✓ | ✓ | | | |
+| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | | | | | ✓ | ✓ | |
+| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | | | | | ✓ | | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | |
+| fal | `sonilo/v1.1` | | | | | | | | | | ✓ | | | | | | | | | | |
+| fal | `sonilo/v1.1/music` | | | | | | | | | | | ✓ | | | | | | | | | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | ✓ | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | ✓ | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | — | — | |
 
 <!-- testmatrix:end -->
 
