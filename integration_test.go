@@ -1378,3 +1378,120 @@ func TestVeoVideo_Integration(t *testing.T) {
 
 	// Veo I2V requires an image URL (no inline bytes) — skip in automated tests.
 }
+
+// --- Typesafe ---------------------------------------------------------------
+
+func TestTypesafe_Integration(t *testing.T) {
+	key := os.Getenv("TYPESAFE_API_KEY")
+	if key == "" {
+		t.Skip("TYPESAFE_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("Noul", func(t *testing.T) {
+		t.Parallel()
+		p := NewTypesafeJudgmentProvider(key)
+		p.SetMeter(newCostTracker(t))
+		result, err := p.Judge(ctx, &JudgmentRequest{
+			State: "Help! My payouts have been failing for 3 days and I'm losing money!",
+			Questions: map[string]JudgmentQuestion{
+				"is_urgent": Noul("Does this message convey urgency?"),
+			},
+		})
+		if err != nil {
+			t.Fatalf("judge: %v", err)
+		}
+		a := result.Answers["is_urgent"]
+		if a.Type != QuestionNoul {
+			t.Fatalf("type: want noul, got %s", a.Type)
+		}
+		if a.Noul < 0.5 {
+			t.Errorf("expected high urgency, got %.2f", a.Noul)
+		}
+		t.Logf("is_urgent: %.2f", a.Noul)
+	})
+
+	t.Run("Choice", func(t *testing.T) {
+		t.Parallel()
+		p := NewTypesafeJudgmentProvider(key)
+		p.SetMeter(newCostTracker(t))
+		billing := "related to billing or payments"
+		technical := "related to technical issues or bugs"
+		result, err := p.Judge(ctx, &JudgmentRequest{
+			State: "I can't log in to my account, the password reset email never arrives.",
+			Questions: map[string]JudgmentQuestion{
+				"category": Choice("What support category does this belong to?", map[string]*string{
+					"billing":   &billing,
+					"technical": &technical,
+					"sales":     nil,
+				}),
+			},
+		})
+		if err != nil {
+			t.Fatalf("judge: %v", err)
+		}
+		a := result.Answers["category"]
+		if a.Type != QuestionChoice {
+			t.Fatalf("type: want choice, got %s", a.Type)
+		}
+		if a.Choice == "" {
+			t.Fatal("empty choice")
+		}
+		if len(a.Probabilities) == 0 {
+			t.Fatal("no probabilities")
+		}
+		t.Logf("category: %s (confidence=%.2f, probs=%v)", a.Choice, a.Confidence, a.Probabilities)
+	})
+
+	t.Run("Score", func(t *testing.T) {
+		t.Parallel()
+		p := NewTypesafeJudgmentProvider(key)
+		p.SetMeter(newCostTracker(t))
+		result, err := p.Judge(ctx, &JudgmentRequest{
+			State: "This is absolutely unacceptable! I've been waiting for WEEKS!",
+			Questions: map[string]JudgmentQuestion{
+				"anger": Score("How angry is the user?", []string{"Calm", "Mildly annoyed", "Frustrated", "Very angry"}),
+			},
+		})
+		if err != nil {
+			t.Fatalf("judge: %v", err)
+		}
+		a := result.Answers["anger"]
+		if a.Type != QuestionScore {
+			t.Fatalf("type: want score, got %s", a.Type)
+		}
+		if len(a.Legend) == 0 {
+			t.Fatal("no legend")
+		}
+		if len(a.Probabilities) == 0 {
+			t.Fatal("no probabilities")
+		}
+		t.Logf("anger: %.2f (confidence=%.2f, legend=%v)", a.Score, a.Confidence, a.Legend)
+	})
+
+	t.Run("MultiQuestion", func(t *testing.T) {
+		t.Parallel()
+		p := NewTypesafeJudgmentProvider(key)
+		p.SetMeter(newCostTracker(t))
+		result, err := p.Judge(ctx, &JudgmentRequest{
+			State: "Your product is great but the docs could use some work.",
+			Questions: map[string]JudgmentQuestion{
+				"positive":  Noul("Is the overall sentiment positive?"),
+				"sentiment": Score("Rate the sentiment", []string{"Negative", "Neutral", "Positive"}),
+			},
+		})
+		if err != nil {
+			t.Fatalf("judge: %v", err)
+		}
+		if len(result.Answers) != 2 {
+			t.Fatalf("want 2 answers, got %d", len(result.Answers))
+		}
+		if result.Usage.InputTokens == 0 {
+			t.Error("expected non-zero input tokens")
+		}
+		t.Logf("positive=%.2f sentiment=%.2f (in=%d out=%d)",
+			result.Answers["positive"].Noul, result.Answers["sentiment"].Score,
+			result.Usage.InputTokens, result.Usage.OutputTokens)
+	})
+}

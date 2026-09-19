@@ -10,7 +10,7 @@
 
 <p align="center">Multimodal Go module for building across AI providers, with realistic cost tracking baked in, not just token counts.</p>
 
-<p align="center"><sub>From the obvious to the overlooked: chat, streaming, reasoning, tool use, structured output, embeddings, speech-to-text, text-to-speech, sound effects, music generation, realtime voice, moderation, image gen & editing, video gen.</sub></p>
+<p align="center"><sub>From the obvious to the overlooked: chat, streaming, reasoning, tool use, structured output, judgment, embeddings, speech-to-text, text-to-speech, sound effects, music generation, realtime voice, moderation, image gen & editing, video gen.</sub></p>
 
 ## Install
 
@@ -227,11 +227,32 @@ Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`,
 
 Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), `EstimateAudioCost` (per second of generated audio), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
 
+### Judgment
+
+Evaluate content with typed questions — get calibrated probabilities instead of raw LLM text. Supports boolean (noul), classification (choice), and ordinal (score) questions, batched in a single call.
+
+```go
+judge := ai.NewJudgmentProvider("typesafe", apiKey)
+
+result, err := judge.Judge(ctx, &ai.JudgmentRequest{
+    State: "Help! My payouts have been failing for 3 days!",
+    Questions: map[string]ai.JudgmentQuestion{
+        "is_urgent": ai.Noul("Does this message convey urgency?"),
+        "anger":     ai.Score("How angry is the user?", []string{
+            "Calm", "Mildly annoyed", "Frustrated", "Very angry",
+        }),
+    },
+})
+// result.Answers["is_urgent"].Noul  → 0.97  (boolean probability)
+// result.Answers["anger"].Score     → 2.99  (ordinal 0–3)
+```
+
 ## Providers
 
 | Factory | Providers | Features |
 |---------|-----------|----------|
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
+| `NewJudgmentProvider(provider, apiKey)` | typesafe | Typed judgment (noul, choice, score) |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
 | `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
@@ -244,32 +265,33 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Embeddings | STT | TTS | TTSFX | TTMusic | RT Voice | RT Voice Tools | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
-|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | | | | | ✓ |
-| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
-| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | | | | | |
-| OpenAI | `text-embedding-3-small` | | | | | | | ✓ | | | | | | | | | | | | | |
-| OpenAI | `whisper-1` | | | | | | | | ✓ | | | | | | | | | | | | |
-| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | ✓ | | | | | | | | | | | |
-| OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | ✓ | ✓ | | | | | | | |
-| OpenAI | `omni-moderation-latest` | | | | | | | | | | | | | | ✓ | | | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | | | | | | ✓ | ✓ | | | | |
-| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
-| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | | | | | ✓ | ✓ | ✓ | | | |
-| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | | | | | ✓ | ✓ | |
-| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | | | | | ✓ | | |
-| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
-| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | |
-| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | |
-| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | | | | | |
-| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | |
-| fal | `sonilo/v1.1` | | | | | | | | | | ✓ | | | | | | | | | | |
-| fal | `sonilo/v1.1/music` | | | | | | | | | | | ✓ | | | | | | | | | |
-| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | ✓ | | |
-| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | |
-| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | ✓ | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | — | — | |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Judgment | Embeddings | STT | TTS | TTSFX | TTMusic | RT Voice | RT Voice Tools | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
+|----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | ✓ |
+| OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
+| OpenAI | `gpt-5-mini` | | | ✓ | | | | | | | | | | | | | | | | | | |
+| OpenAI | `text-embedding-3-small` | | | | | | | | ✓ | | | | | | | | | | | | | |
+| OpenAI | `whisper-1` | | | | | | | | | ✓ | | | | | | | | | | | | |
+| OpenAI | `gpt-4o-mini-tts` | | | | | | | | | | ✓ | | | | | | | | | | | |
+| OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | | ✓ | ✓ | | | | | | | |
+| OpenAI | `omni-moderation-latest` | | | | | | | | | | | | | | | ✓ | | | | | | |
+| OpenAI | `gpt-image-1` | | | | | | | | | | | | | | | | ✓ | ✓ | | | | |
+| Typesafe | `jev-latest` | | | | | | | ✓ | | | | | | | | | | | | | | |
+| Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
+| Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | | | | | | ✓ | ✓ | ✓ | | | |
+| Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | | | | | | ✓ | ✓ | |
+| Gemini | `veo-3.1-fast` | | | | | | | | | | | | | | | | | | | ✓ | | |
+| Hugging Face | `Kimi-K2-Instruct` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
+| Hugging Face | `Kimi-K3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
+| Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | | |
+| Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | | | | | | |
+| Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | | |
+| fal | `sonilo/v1.1` | | | | | | | | | | | ✓ | | | | | | | | | | |
+| fal | `sonilo/v1.1/music` | | | | | | | | | | | | ✓ | | | | | | | | | |
+| fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | | |
+| fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | | ✓ | |
+| fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | | ✓ | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | | — | — | |
 
 <!-- testmatrix:end -->
 
