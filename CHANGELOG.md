@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/nurf-ai/ai/compare/v0.9.3...v0.10.0) (2026-09-19)
+
+
+### Features
+
+* add JudgmentProvider interface with Typesafe (Jev) implementation ([92ba580](https://github.com/nurf-ai/ai/commit/92ba5800233472bfd4061bda34249df408962d6c))
+* add JudgmentProvider with Typesafe (Jev) implementation ([bb76e3c](https://github.com/nurf-ai/ai/commit/bb76e3c77e9a98372208d6bacf423193985ab2ee))
+
 ## [0.9.3](https://github.com/nurf-ai/ai/compare/v0.9.2...v0.9.3) (2026-09-09)
 
 
