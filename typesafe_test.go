@@ -40,9 +40,9 @@ func TestTypesafeJudge(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(JudgmentResult{
+		_ = json.NewEncoder(w).Encode(SystemOneResult{
 			Model: "jev-latest",
-			Answers: map[string]JudgmentAnswer{
+			Answers: map[string]SystemOneAnswer{
 				"is_urgent": {Type: QuestionNoul, Noul: 0.92},
 				"category": {
 					Type:          QuestionChoice,
@@ -58,19 +58,19 @@ func TestTypesafeJudge(t *testing.T) {
 					Confidence:    0.78,
 				},
 			},
-			Usage: JudgmentUsage{InputTokens: 100, OutputTokens: 50},
+			Usage: SystemOneUsage{InputTokens: 100, OutputTokens: 50},
 		})
 	}))
 	defer srv.Close()
 
-	p := NewTypesafeJudgmentProvider("test-key",
+	p := NewTypesafeSystemOneProvider("test-key",
 		WithTypesafeBase(srv.URL),
 	)
 
 	billing := "related to billing"
-	result, err := p.Judge(context.Background(), &JudgmentRequest{
+	result, err := p.Judge(context.Background(), &SystemOneRequest{
 		State: "Help! My payouts have been failing for 3 days.",
-		Questions: map[string]JudgmentQuestion{
+		Questions: map[string]SystemOneQuestion{
 			"is_urgent": Noul("Does this convey urgency?"),
 			"category":  Choice("What category?", map[string]*string{"billing": &billing, "technical": nil, "sales": nil}),
 			"anger":     Score("How angry is the user?", []string{"Calm", "Frustrated", "Very angry"}),
@@ -104,21 +104,21 @@ func TestTypesafeJudge(t *testing.T) {
 
 func TestTypesafeJudgeMeter(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(JudgmentResult{
+		_ = json.NewEncoder(w).Encode(SystemOneResult{
 			Model:   "jev-latest",
-			Answers: map[string]JudgmentAnswer{"q": {Type: QuestionNoul, Noul: 0.5}},
-			Usage:   JudgmentUsage{InputTokens: 42, OutputTokens: 7},
+			Answers: map[string]SystemOneAnswer{"q": {Type: QuestionNoul, Noul: 0.5}},
+			Usage:   SystemOneUsage{InputTokens: 42, OutputTokens: 7},
 		})
 	}))
 	defer srv.Close()
 
 	var got UsageEvent
-	p := NewTypesafeJudgmentProvider("k", WithTypesafeBase(srv.URL))
+	p := NewTypesafeSystemOneProvider("k", WithTypesafeBase(srv.URL))
 	p.SetMeter(func(ev UsageEvent) { got = ev })
 
-	_, err := p.Judge(context.Background(), &JudgmentRequest{
+	_, err := p.Judge(context.Background(), &SystemOneRequest{
 		State:     "test",
-		Questions: map[string]JudgmentQuestion{"q": Noul("yes?")},
+		Questions: map[string]SystemOneQuestion{"q": Noul("yes?")},
 	})
 	if err != nil {
 		t.Fatalf("Judge: %v", err)
@@ -138,10 +138,10 @@ func TestTypesafeError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := NewTypesafeJudgmentProvider("bad-key", WithTypesafeBase(srv.URL))
-	_, err := p.Judge(context.Background(), &JudgmentRequest{
+	p := NewTypesafeSystemOneProvider("bad-key", WithTypesafeBase(srv.URL))
+	_, err := p.Judge(context.Background(), &SystemOneRequest{
 		State:     "x",
-		Questions: map[string]JudgmentQuestion{"q": Noul("y")},
+		Questions: map[string]SystemOneQuestion{"q": Noul("y")},
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -167,12 +167,12 @@ func TestTypesafeNoulWithCriteria(t *testing.T) {
 	}
 }
 
-func TestNewJudgmentProviderFactory(t *testing.T) {
-	p := NewJudgmentProvider("typesafe", "key")
+func TestNewSystemOneProviderFactory(t *testing.T) {
+	p := NewSystemOneProvider("typesafe", "key")
 	if p == nil {
 		t.Fatal("want non-nil provider")
 	}
-	if NewJudgmentProvider("unknown", "key") != nil {
+	if NewSystemOneProvider("unknown", "key") != nil {
 		t.Fatal("want nil for unknown provider")
 	}
 }

@@ -14,9 +14,9 @@ import (
 
 const defaultTypesafeBase = "https://api.typesafe.ai"
 
-// TypesafeJudgmentProvider implements JudgmentProvider using the Typesafe
+// TypesafeSystemOneProvider implements SystemOneProvider using the Typesafe
 // System One API (Jev model).
-type TypesafeJudgmentProvider struct {
+type TypesafeSystemOneProvider struct {
 	apiKey string
 	model  string
 	base   string
@@ -24,12 +24,12 @@ type TypesafeJudgmentProvider struct {
 	meter  MeterHook
 }
 
-// TypesafeOption configures a TypesafeJudgmentProvider.
-type TypesafeOption func(*TypesafeJudgmentProvider)
+// TypesafeOption configures a TypesafeSystemOneProvider.
+type TypesafeOption func(*TypesafeSystemOneProvider)
 
 // WithTypesafeHTTPClient overrides the HTTP client.
 func WithTypesafeHTTPClient(h *http.Client) TypesafeOption {
-	return func(p *TypesafeJudgmentProvider) {
+	return func(p *TypesafeSystemOneProvider) {
 		if h != nil {
 			p.http = h
 		}
@@ -38,7 +38,7 @@ func WithTypesafeHTTPClient(h *http.Client) TypesafeOption {
 
 // WithTypesafeBase overrides the API base URL.
 func WithTypesafeBase(base string) TypesafeOption {
-	return func(p *TypesafeJudgmentProvider) {
+	return func(p *TypesafeSystemOneProvider) {
 		if base != "" {
 			p.base = strings.TrimRight(base, "/")
 		}
@@ -47,15 +47,15 @@ func WithTypesafeBase(base string) TypesafeOption {
 
 // WithTypesafeModel overrides the model (default "jev-latest").
 func WithTypesafeModel(model string) TypesafeOption {
-	return func(p *TypesafeJudgmentProvider) {
+	return func(p *TypesafeSystemOneProvider) {
 		if model != "" {
 			p.model = model
 		}
 	}
 }
 
-func NewTypesafeJudgmentProvider(apiKey string, opts ...TypesafeOption) *TypesafeJudgmentProvider {
-	p := &TypesafeJudgmentProvider{
+func NewTypesafeSystemOneProvider(apiKey string, opts ...TypesafeOption) *TypesafeSystemOneProvider {
+	p := &TypesafeSystemOneProvider{
 		apiKey: apiKey,
 		model:  "jev-latest",
 		base:   defaultTypesafeBase,
@@ -67,15 +67,15 @@ func NewTypesafeJudgmentProvider(apiKey string, opts ...TypesafeOption) *Typesaf
 	return p
 }
 
-func (p *TypesafeJudgmentProvider) SetMeter(hook MeterHook) { p.meter = hook }
+func (p *TypesafeSystemOneProvider) SetMeter(hook MeterHook) { p.meter = hook }
 
 type typesafeRequest struct {
 	State     any                         `json:"state"`
 	Model     string                      `json:"model"`
-	Questions map[string]JudgmentQuestion `json:"questions"`
+	Questions map[string]SystemOneQuestion `json:"questions"`
 }
 
-func (p *TypesafeJudgmentProvider) Judge(ctx context.Context, req *JudgmentRequest) (*JudgmentResult, error) {
+func (p *TypesafeSystemOneProvider) Judge(ctx context.Context, req *SystemOneRequest) (*SystemOneResult, error) {
 	wireReq := typesafeRequest{
 		State:     req.State,
 		Model:     p.model,
@@ -111,7 +111,7 @@ func (p *TypesafeJudgmentProvider) Judge(ctx context.Context, req *JudgmentReque
 		}
 	}
 
-	var result JudgmentResult
+	var result SystemOneResult
 	if err := json.Unmarshal(data, &result); err != nil {
 		return nil, fmt.Errorf("typesafe: decode response: %w", err)
 	}

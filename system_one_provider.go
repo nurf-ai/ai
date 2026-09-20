@@ -8,8 +8,8 @@ const (
 	QuestionScore  = "score"
 )
 
-// JudgmentQuestion is one typed question in a judgment request.
-type JudgmentQuestion struct {
+// SystemOneQuestion is one typed question in a System One request.
+type SystemOneQuestion struct {
 	Type         string `json:"type"`
 	Instructions any    `json:"instructions"`
 	Criteria     any    `json:"criteria,omitempty"`
@@ -22,13 +22,13 @@ type NoulCriteria struct {
 }
 
 // Noul builds a boolean-probability question.
-func Noul(instructions any) JudgmentQuestion {
-	return JudgmentQuestion{Type: QuestionNoul, Instructions: instructions}
+func Noul(instructions any) SystemOneQuestion {
+	return SystemOneQuestion{Type: QuestionNoul, Instructions: instructions}
 }
 
 // NoulWith builds a noul question with explicit true/false descriptions.
-func NoulWith(instructions any, trueDesc, falseDesc string) JudgmentQuestion {
-	return JudgmentQuestion{
+func NoulWith(instructions any, trueDesc, falseDesc string) SystemOneQuestion {
+	return SystemOneQuestion{
 		Type:         QuestionNoul,
 		Instructions: instructions,
 		Criteria:     NoulCriteria{True: trueDesc, False: falseDesc},
@@ -37,8 +37,8 @@ func NoulWith(instructions any, trueDesc, falseDesc string) JudgmentQuestion {
 
 // Choice builds a single-selection question. Each key is an option; a nil
 // value means no description for that option.
-func Choice(instructions any, options map[string]*string) JudgmentQuestion {
-	return JudgmentQuestion{
+func Choice(instructions any, options map[string]*string) SystemOneQuestion {
+	return SystemOneQuestion{
 		Type:         QuestionChoice,
 		Instructions: instructions,
 		Criteria:     options,
@@ -47,18 +47,18 @@ func Choice(instructions any, options map[string]*string) JudgmentQuestion {
 
 // Score builds an ordinal rating question. Levels are ordered low→high,
 // minimum 2.
-func Score(instructions any, levels []string) JudgmentQuestion {
-	return JudgmentQuestion{
+func Score(instructions any, levels []string) SystemOneQuestion {
+	return SystemOneQuestion{
 		Type:         QuestionScore,
 		Instructions: instructions,
 		Criteria:     levels,
 	}
 }
 
-// JudgmentAnswer is the typed response for one question. Fields are populated
+// SystemOneAnswer is the typed response for one question. Fields are populated
 // based on Type: noul → Noul; choice → Choice/Probabilities/Confidence;
 // score → Score/Legend/Probabilities/Confidence.
-type JudgmentAnswer struct {
+type SystemOneAnswer struct {
 	Type          string             `json:"type"`
 	Noul          float64            `json:"noul,omitempty"`
 	Choice        string             `json:"choice,omitempty"`
@@ -68,52 +68,52 @@ type JudgmentAnswer struct {
 	Confidence    float64            `json:"confidence,omitempty"`
 }
 
-// JudgmentRequest is the input to a judgment call.
-type JudgmentRequest struct {
-	State     any                         `json:"state"`
-	Questions map[string]JudgmentQuestion `json:"questions"`
+// SystemOneRequest is the input to a System One call.
+type SystemOneRequest struct {
+	State     any                            `json:"state"`
+	Questions map[string]SystemOneQuestion `json:"questions"`
 }
 
-// JudgmentUsage tracks token consumption for a judgment call.
-type JudgmentUsage struct {
+// SystemOneUsage tracks token consumption for a System One call.
+type SystemOneUsage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 }
 
-// JudgmentResult is the output of a judgment call.
-type JudgmentResult struct {
-	Model   string                      `json:"model"`
-	Answers map[string]JudgmentAnswer   `json:"answers"`
-	Usage   JudgmentUsage               `json:"usage"`
+// SystemOneResult is the output of a System One call.
+type SystemOneResult struct {
+	Model   string                         `json:"model"`
+	Answers map[string]SystemOneAnswer   `json:"answers"`
+	Usage   SystemOneUsage               `json:"usage"`
 }
 
-// JudgmentProvider evaluates content against typed questions and returns
+// SystemOneProvider evaluates content against typed questions and returns
 // structured answers with calibrated confidence.
-type JudgmentProvider interface {
-	Judge(ctx context.Context, req *JudgmentRequest) (*JudgmentResult, error)
+type SystemOneProvider interface {
+	Judge(ctx context.Context, req *SystemOneRequest) (*SystemOneResult, error)
 }
 
-// JudgmentMeterable is implemented by judgment providers that accept a meter hook.
-type JudgmentMeterable interface {
+// SystemOneMeterable is implemented by System One providers that accept a meter hook.
+type SystemOneMeterable interface {
 	SetMeter(MeterHook)
 }
 
-// SetJudgmentMeter attaches a meter hook to any JudgmentProvider that
-// satisfies JudgmentMeterable.
-func SetJudgmentMeter(j JudgmentProvider, hook MeterHook) {
+// SetSystemOneMeter attaches a meter hook to any SystemOneProvider that
+// satisfies SystemOneMeterable.
+func SetSystemOneMeter(j SystemOneProvider, hook MeterHook) {
 	if hook == nil || j == nil {
 		return
 	}
-	if m, ok := j.(JudgmentMeterable); ok {
+	if m, ok := j.(SystemOneMeterable); ok {
 		m.SetMeter(hook)
 	}
 }
 
-// NewJudgmentProvider creates a JudgmentProvider from a provider name.
-func NewJudgmentProvider(providerName, apiKey string) JudgmentProvider {
+// NewSystemOneProvider creates a SystemOneProvider from a provider name.
+func NewSystemOneProvider(providerName, apiKey string) SystemOneProvider {
 	switch providerName {
 	case "typesafe":
-		return NewTypesafeJudgmentProvider(apiKey)
+		return NewTypesafeSystemOneProvider(apiKey)
 	default:
 		return nil
 	}

@@ -1391,11 +1391,11 @@ func TestTypesafe_Integration(t *testing.T) {
 
 	t.Run("Noul", func(t *testing.T) {
 		t.Parallel()
-		p := NewTypesafeJudgmentProvider(key)
+		p := NewTypesafeSystemOneProvider(key)
 		p.SetMeter(newCostTracker(t))
-		result, err := p.Judge(ctx, &JudgmentRequest{
+		result, err := p.Judge(ctx, &SystemOneRequest{
 			State: "Help! My payouts have been failing for 3 days and I'm losing money!",
-			Questions: map[string]JudgmentQuestion{
+			Questions: map[string]SystemOneQuestion{
 				"is_urgent": Noul("Does this message convey urgency?"),
 			},
 		})
@@ -1414,13 +1414,13 @@ func TestTypesafe_Integration(t *testing.T) {
 
 	t.Run("Choice", func(t *testing.T) {
 		t.Parallel()
-		p := NewTypesafeJudgmentProvider(key)
+		p := NewTypesafeSystemOneProvider(key)
 		p.SetMeter(newCostTracker(t))
 		billing := "related to billing or payments"
 		technical := "related to technical issues or bugs"
-		result, err := p.Judge(ctx, &JudgmentRequest{
+		result, err := p.Judge(ctx, &SystemOneRequest{
 			State: "I can't log in to my account, the password reset email never arrives.",
-			Questions: map[string]JudgmentQuestion{
+			Questions: map[string]SystemOneQuestion{
 				"category": Choice("What support category does this belong to?", map[string]*string{
 					"billing":   &billing,
 					"technical": &technical,
@@ -1446,11 +1446,11 @@ func TestTypesafe_Integration(t *testing.T) {
 
 	t.Run("Score", func(t *testing.T) {
 		t.Parallel()
-		p := NewTypesafeJudgmentProvider(key)
+		p := NewTypesafeSystemOneProvider(key)
 		p.SetMeter(newCostTracker(t))
-		result, err := p.Judge(ctx, &JudgmentRequest{
+		result, err := p.Judge(ctx, &SystemOneRequest{
 			State: "This is absolutely unacceptable! I've been waiting for WEEKS!",
-			Questions: map[string]JudgmentQuestion{
+			Questions: map[string]SystemOneQuestion{
 				"anger": Score("How angry is the user?", []string{"Calm", "Mildly annoyed", "Frustrated", "Very angry"}),
 			},
 		})
@@ -1472,11 +1472,11 @@ func TestTypesafe_Integration(t *testing.T) {
 
 	t.Run("MultiQuestion", func(t *testing.T) {
 		t.Parallel()
-		p := NewTypesafeJudgmentProvider(key)
+		p := NewTypesafeSystemOneProvider(key)
 		p.SetMeter(newCostTracker(t))
-		result, err := p.Judge(ctx, &JudgmentRequest{
+		result, err := p.Judge(ctx, &SystemOneRequest{
 			State: "Your product is great but the docs could use some work.",
-			Questions: map[string]JudgmentQuestion{
+			Questions: map[string]SystemOneQuestion{
 				"positive":  Noul("Is the overall sentiment positive?"),
 				"sentiment": Score("Rate the sentiment", []string{"Negative", "Neutral", "Positive"}),
 			},
