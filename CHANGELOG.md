@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.0](https://github.com/nurf-ai/ai/compare/v0.10.0...v0.11.0) (2026-09-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* JudgmentProvider renamed to SystemOneProvider, all related types and functions renamed accordingly. JS API changed from surf.ai.judgment to surf.ai.systemOne.
+
+### Features
+
+* rename JudgmentProvider → SystemOneProvider (Typesafe System One) ([f818e41](https://github.com/nurf-ai/ai/commit/f818e411e65e62ecd01bc055ec1f7b6521259c72))
+
 ## [0.10.0](https://github.com/nurf-ai/ai/compare/v0.9.3...v0.10.0) (2026-09-19)
 
 
