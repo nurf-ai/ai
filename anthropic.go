@@ -459,6 +459,11 @@ func anthropicThinkingBudget(effort string) int64 {
 // hits. Zero accuracy impact; large cost reduction on stable-prefix
 // prompts (planner sys prompt is 6k+ chars in our baseline).
 func (p *AnthropicProvider) buildSysBlocks(ctx context.Context, sysPrompt string) []anthropic.TextBlockParam {
+	if sysPrompt == "" {
+		// the API rejects an empty text block ("system: text content blocks
+		// must be non-empty"); omitting the field sends no system prompt
+		return nil
+	}
 	block := anthropic.TextBlockParam{Text: sysPrompt}
 	if CacheSysPromptFromCtx(ctx) {
 		block.CacheControl = anthropic.NewCacheControlEphemeralParam()
