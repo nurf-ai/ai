@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/nurf-ai/ai/compare/v0.11.0...v0.11.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **anthropic:** omit the system block when the prompt is empty ([932fcbe](https://github.com/nurf-ai/ai/commit/932fcbe48164e1f07b364b1a7b4b437171b808dd))
+
 ## [0.11.0](https://github.com/nurf-ai/ai/compare/v0.10.0...v0.11.0) (2026-09-20)
 
 
