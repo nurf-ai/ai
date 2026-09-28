@@ -146,6 +146,7 @@ func (p *GeminiImageProvider) emitImageUsage(ctx context.Context) {
 		return
 	}
 	p.meter(UsageEvent{
+		DebugSpanID:      DebugSpanIDFromCtx(ctx),
 		CallerID:         MeterCallerIDFromCtx(ctx),
 		Provider:         "gemini",
 		Model:            p.model,

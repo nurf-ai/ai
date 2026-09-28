@@ -180,7 +180,7 @@ func TestFalVideoProvider_Generate(t *testing.T) {
 	p.SetMeter(func(ev UsageEvent) { events = append(events, ev) })
 
 	seed := int64(7)
-	res, err := p.Generate(WithMeterOperation(context.Background(), "tv"), VideoRequest{
+	res, err := p.Generate(WithDebugSpanID(WithMeterOperation(context.Background(), "tv"), "span-1"), VideoRequest{
 		Prompt:      "a cat surfing",
 		Image:       []byte("jpegbytes"),
 		Duration:    6,
@@ -215,7 +215,7 @@ func TestFalVideoProvider_Generate(t *testing.T) {
 	if res.CostUSD != 0.24 {
 		t.Errorf("cost = %v, want 0.24 (6s @ $0.04)", res.CostUSD)
 	}
-	if len(events) != 1 || events[0].Provider != "fal" || events[0].Operation != "tv" || events[0].Metadata["type"] != "video_gen" {
+	if len(events) != 1 || events[0].Provider != "fal" || events[0].Operation != "tv" || events[0].Metadata["type"] != "video_gen" || events[0].DebugSpanID != "span-1" {
 		t.Fatalf("unexpected meter events: %+v", events)
 	}
 }

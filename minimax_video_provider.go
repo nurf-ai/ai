@@ -136,6 +136,7 @@ func (p *MinimaxVideoProvider) Generate(ctx context.Context, req VideoRequest) (
 
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "minimax",
 			Model:            model,

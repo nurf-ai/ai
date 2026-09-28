@@ -70,8 +70,8 @@ func NewTypesafeSystemOneProvider(apiKey string, opts ...TypesafeOption) *Typesa
 func (p *TypesafeSystemOneProvider) SetMeter(hook MeterHook) { p.meter = hook }
 
 type typesafeRequest struct {
-	State     any                         `json:"state"`
-	Model     string                      `json:"model"`
+	State     any                          `json:"state"`
+	Model     string                       `json:"model"`
 	Questions map[string]SystemOneQuestion `json:"questions"`
 }
 
@@ -118,14 +118,15 @@ func (p *TypesafeSystemOneProvider) Judge(ctx context.Context, req *SystemOneReq
 
 	if p.meter != nil {
 		ev := UsageEvent{
-			CallerID:         MeterCallerIDFromCtx(ctx),
-			Provider:         "typesafe",
-			Model:            result.Model,
-			Operation:        MeterOperationFromCtx(ctx),
-			InputTokens:      result.Usage.InputTokens,
-			OutputTokens:     result.Usage.OutputTokens,
-			TotalTokens:      result.Usage.InputTokens + result.Usage.OutputTokens,
-			Metadata:         mergeMeterMetadata(ctx, nil),
+			DebugSpanID:  DebugSpanIDFromCtx(ctx),
+			CallerID:     MeterCallerIDFromCtx(ctx),
+			Provider:     "typesafe",
+			Model:        result.Model,
+			Operation:    MeterOperationFromCtx(ctx),
+			InputTokens:  result.Usage.InputTokens,
+			OutputTokens: result.Usage.OutputTokens,
+			TotalTokens:  result.Usage.InputTokens + result.Usage.OutputTokens,
+			Metadata:     mergeMeterMetadata(ctx, nil),
 		}
 		attachBlocks(ctx, &ev)
 		p.meter(ev)

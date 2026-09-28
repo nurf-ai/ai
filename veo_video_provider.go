@@ -154,6 +154,7 @@ func (p *VeoVideoProvider) Generate(ctx context.Context, req VideoRequest) (*Vid
 
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "veo",
 			Model:            model,

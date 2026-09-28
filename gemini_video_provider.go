@@ -213,6 +213,7 @@ func (p *GeminiVideoProvider) Generate(ctx context.Context, req VideoRequest) (*
 			md["video_tokens"] = videoTokens
 		}
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "gemini",
 			Model:            model,

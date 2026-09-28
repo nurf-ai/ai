@@ -72,6 +72,7 @@ func (p *OpenAIImageProvider) Generate(ctx context.Context, prompt, model, size 
 	logger.Debug("generated ok", zap.String("model", model), zap.Int("b64_len", len(resp.Data[0].B64JSON)))
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "openai",
 			Model:            model,
@@ -122,6 +123,7 @@ func (p *OpenAIImageProvider) Edit(ctx context.Context, image []byte, editPrompt
 	}
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "openai",
 			Model:            p.defaultModel,
@@ -168,8 +170,12 @@ func (p *OpenAIImageProvider) editDirect(ctx context.Context, image []byte, prom
 	defer resp.Body.Close() //nolint:errcheck
 
 	var result struct {
-		Data  []struct{ B64JSON string `json:"b64_json"` } `json:"data"`
-		Error *struct{ Message string `json:"message"` }   `json:"error"`
+		Data []struct {
+			B64JSON string `json:"b64_json"`
+		} `json:"data"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", fmt.Errorf("decode response: %w", err)

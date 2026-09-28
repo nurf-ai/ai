@@ -60,6 +60,7 @@ func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req TTSRequest) (io.
 	}
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "openai",
 			Model:            p.model,

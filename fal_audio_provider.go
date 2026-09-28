@@ -26,8 +26,8 @@ func NewFalAudioProvider(apiKey, model string, opts ...FalOption) *FalAudioProvi
 }
 
 func (p *FalAudioProvider) Name() string            { return "fal" }
-func (p *FalAudioProvider) Model() string            { return p.model }
-func (p *FalAudioProvider) SetMeter(hook MeterHook)  { p.meter = hook }
+func (p *FalAudioProvider) Model() string           { return p.model }
+func (p *FalAudioProvider) SetMeter(hook MeterHook) { p.meter = hook }
 
 type falAudioOutput struct {
 	Audio falFile `json:"audio"`
@@ -85,6 +85,7 @@ func (p *FalAudioProvider) Generate(ctx context.Context, req AudioRequest) (*Aud
 
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "fal",
 			Model:            endpoint,

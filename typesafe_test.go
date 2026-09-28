@@ -116,12 +116,15 @@ func TestTypesafeJudgeMeter(t *testing.T) {
 	p := NewTypesafeSystemOneProvider("k", WithTypesafeBase(srv.URL))
 	p.SetMeter(func(ev UsageEvent) { got = ev })
 
-	_, err := p.Judge(context.Background(), &SystemOneRequest{
+	_, err := p.Judge(WithDebugSpanID(context.Background(), "span-1"), &SystemOneRequest{
 		State:     "test",
 		Questions: map[string]SystemOneQuestion{"q": Noul("yes?")},
 	})
 	if err != nil {
 		t.Fatalf("Judge: %v", err)
+	}
+	if got.DebugSpanID != "span-1" {
+		t.Errorf("debug_span_id: want span-1, got %q", got.DebugSpanID)
 	}
 	if got.Provider != "typesafe" {
 		t.Errorf("provider: want typesafe, got %s", got.Provider)

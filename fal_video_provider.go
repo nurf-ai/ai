@@ -127,6 +127,7 @@ func (p *FalVideoProvider) Generate(ctx context.Context, req VideoRequest) (*Vid
 
 	if p.meter != nil {
 		p.meter(UsageEvent{
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
 			CallerID:         MeterCallerIDFromCtx(ctx),
 			Provider:         "fal",
 			Model:            endpoint,
