@@ -15,7 +15,7 @@ import (
 
 // UsageEvent represents a single LLM/image-gen usage event for metering.
 type UsageEvent struct {
-	CallerID           uuid.UUID `json:"caller_id"`
+	CallerID         uuid.UUID `json:"caller_id"`
 	Provider         string    `json:"provider"`
 	Model            string    `json:"model"`
 	Operation        string    `json:"operation"`

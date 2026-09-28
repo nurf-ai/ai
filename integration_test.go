@@ -936,9 +936,9 @@ func TestHuggingFace_Integration(t *testing.T) {
 // --- Ollama --------------------------------------------------------------
 
 type ollamaTestModel struct {
-	name           string
-	structured     bool
-	stream         bool
+	name       string
+	structured bool
+	stream     bool
 }
 
 func TestOllama_Integration(t *testing.T) {

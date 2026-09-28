@@ -70,7 +70,7 @@ type SystemOneAnswer struct {
 
 // SystemOneRequest is the input to a System One call.
 type SystemOneRequest struct {
-	State     any                            `json:"state"`
+	State     any                          `json:"state"`
 	Questions map[string]SystemOneQuestion `json:"questions"`
 }
 
@@ -82,9 +82,9 @@ type SystemOneUsage struct {
 
 // SystemOneResult is the output of a System One call.
 type SystemOneResult struct {
-	Model   string                         `json:"model"`
-	Answers map[string]SystemOneAnswer   `json:"answers"`
-	Usage   SystemOneUsage               `json:"usage"`
+	Model   string                     `json:"model"`
+	Answers map[string]SystemOneAnswer `json:"answers"`
+	Usage   SystemOneUsage             `json:"usage"`
 }
 
 // SystemOneProvider evaluates content against typed questions and returns

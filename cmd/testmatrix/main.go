@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	cLabel  = "\033[38;5;60m"  // dark blue — tok_in, tok_out, tok_cached
-	cCount  = "\033[38;5;75m"  // light blue — token counts
-	cDollar = "\033[38;5;28m"  // dark green — $ sign
-	cAmount = "\033[38;5;71m"  // light green — dollar amount
+	cLabel  = "\033[38;5;60m" // dark blue — tok_in, tok_out, tok_cached
+	cCount  = "\033[38;5;75m" // light blue — token counts
+	cDollar = "\033[38;5;28m" // dark green — $ sign
+	cAmount = "\033[38;5;71m" // light green — dollar amount
 	cReset  = "\033[0m"
 	costCol = 68
 )

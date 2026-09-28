@@ -193,7 +193,7 @@ func TestRealtimeAudioRoundtrip(t *testing.T) {
 						"response_id": "r1", "item_id": "i1",
 					},
 					map[string]any{
-						"type": "response.audio.done",
+						"type":        "response.audio.done",
 						"response_id": "r1", "item_id": "i1",
 					},
 				)
@@ -244,7 +244,7 @@ func TestRealtimeToolCall(t *testing.T) {
 			switch ev["type"] {
 			case "response.create":
 				_ = conn.WriteJSON(map[string]any{
-					"type": "response.function_call_arguments.done",
+					"type":    "response.function_call_arguments.done",
 					"call_id": "call_1", "name": "get_weather",
 					"arguments":   `{"city":"SF"}`,
 					"response_id": "r1", "item_id": "i1",

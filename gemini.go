@@ -224,8 +224,8 @@ func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []T
 		var decls []*genai.FunctionDeclaration
 		for _, t := range tools {
 			decls = append(decls, &genai.FunctionDeclaration{
-				Name:                t.Name,
-				Description:         t.Description,
+				Name:                 t.Name,
+				Description:          t.Description,
 				ParametersJsonSchema: t.Parameters,
 			})
 		}

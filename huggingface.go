@@ -304,8 +304,8 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 	}
 
 	req := openai.ChatCompletionRequest{
-		Model:     p.model,
-		Messages:  apiMessages,
+		Model:               p.model,
+		Messages:            apiMessages,
 		MaxCompletionTokens: 4096,
 	}
 	if len(apiTools) > 0 {
