@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -298,7 +299,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 				blocks = append(blocks, anthropic.ContentBlockParamUnion{OfText: &anthropic.TextBlockParam{Text: m.Content}})
 			}
 			for _, tc := range m.ToolCalls {
-				raw := json.RawMessage(tc.Arguments)
+				raw := toolInput(tc.Arguments)
 				blocks = append(blocks, anthropic.ContentBlockParamUnion{
 					OfToolUse: &anthropic.ToolUseBlockParam{
 						ID:    tc.ID,
@@ -430,7 +431,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 			resp.ToolCalls = append(resp.ToolCalls, ToolCall{
 				ID:        v.ID,
 				Name:      v.Name,
-				Arguments: json.RawMessage(v.Input),
+				Arguments: toolInput(json.RawMessage(v.Input)),
 			})
 		}
 	}
@@ -646,7 +647,7 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 				blocks = append(blocks, anthropic.ContentBlockParamUnion{OfText: &anthropic.TextBlockParam{Text: m.Content}})
 			}
 			for _, tc := range m.ToolCalls {
-				raw := json.RawMessage(tc.Arguments)
+				raw := toolInput(tc.Arguments)
 				blocks = append(blocks, anthropic.ContentBlockParamUnion{
 					OfToolUse: &anthropic.ToolUseBlockParam{ID: tc.ID, Name: tc.Name, Input: raw},
 				})
@@ -772,7 +773,7 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 			if inToolUse {
 				toolCalls = append(toolCalls, ToolCall{
 					ID: currentToolID, Name: currentToolName,
-					Arguments: json.RawMessage(currentToolArgs.String()),
+					Arguments: toolInput(json.RawMessage(currentToolArgs.String())),
 				})
 				inToolUse = false
 			}
@@ -827,4 +828,15 @@ func resolveRefs(node any, defs map[string]any) any {
 	default:
 		return node
 	}
+}
+
+// toolInput is a tool call's arguments as the API wants them back: a call to a
+// tool that takes none streams no input_json_delta, so its accumulated
+// arguments are "" — and an empty tool_use input fails to marshal on the next
+// request ("unexpected end of JSON input"), killing the turn.
+func toolInput(args json.RawMessage) json.RawMessage {
+	if len(bytes.TrimSpace(args)) == 0 {
+		return json.RawMessage(`{}`)
+	}
+	return args
 }
