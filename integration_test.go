@@ -142,6 +142,36 @@ func TestAnthropicChat_Integration(t *testing.T) {
 		t.Logf("greeting: %v", result["message"])
 	})
 
+	// claude-sonnet-5-5 rejects a forced tool_choice: structured output rides
+	// tool_choice auto + a system nudge there.
+	t.Run("StructuredOutput_Sonnet55", func(t *testing.T) {
+		t.Parallel()
+		p := NewAnthropicProvider(key, "claude-sonnet-5-5")
+		p.SetMeter(newCostTracker(t))
+		var out greeting
+		if err := p.CreateStructuredOutput(ctx, "greet me briefly", "respond with a greeting", &out); err != nil {
+			t.Fatalf("structured output: %v", err)
+		}
+		if out.Message == "" {
+			t.Fatal("empty message")
+		}
+		t.Logf("greeting: %s", out.Message)
+	})
+
+	t.Run("StructuredOutputFromSchema_Sonnet55", func(t *testing.T) {
+		t.Parallel()
+		p := NewAnthropicProvider(key, "claude-sonnet-5-5")
+		p.SetMeter(newCostTracker(t))
+		result, err := p.CreateStructuredOutputFromSchema(ctx, "greet me briefly", "respond with a greeting", testSchema)
+		if err != nil {
+			t.Fatalf("structured output from schema: %v", err)
+		}
+		if result["message"] == nil || result["message"] == "" {
+			t.Fatal("empty message")
+		}
+		t.Logf("greeting: %v", result["message"])
+	})
+
 	t.Run("ChatWithTools", func(t *testing.T) {
 		t.Parallel()
 		p := NewAnthropicProvider(key, "claude-haiku-4-5")

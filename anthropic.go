@@ -106,10 +106,11 @@ func (p *AnthropicProvider) CreateStructuredOutput(ctx context.Context, userProm
 		}
 	}
 
+	toolChoice, sysBlocks := p.structuredToolChoice(p.buildSysBlocks(ctx, sysPrompt))
 	message, err := p.client.Messages.New(ctx, anthropic.MessageNewParams{
 		MaxTokens: 4096,
 		Model:     anthropic.Model(p.model),
-		System:    p.buildSysBlocks(ctx, sysPrompt),
+		System:    sysBlocks,
 		Tools: []anthropic.ToolUnionParam{
 			{
 				OfTool: &anthropic.ToolParam{
@@ -123,7 +124,7 @@ func (p *AnthropicProvider) CreateStructuredOutput(ctx context.Context, userProm
 				},
 			},
 		},
-		ToolChoice: anthropic.ToolChoiceParamOfTool("structured_output"),
+		ToolChoice: toolChoice,
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(userPrompt)),
 		},
@@ -133,16 +134,14 @@ func (p *AnthropicProvider) CreateStructuredOutput(ctx context.Context, userProm
 	}
 	p.emitUsage(ctx, message, sysPrompt, userPrompt)
 
-	for _, block := range message.Content {
-		if toolUse, ok := block.AsAny().(anthropic.ToolUseBlock); ok {
-			if err := json.Unmarshal(toolUse.Input, structuredOutput); err != nil {
-				return fmt.Errorf("failed to unmarshal tool input: %w", err)
-			}
-			return nil
-		}
+	out, err := structuredOutputJSON(message)
+	if err != nil {
+		return err
 	}
-
-	return fmt.Errorf("no structured output in response")
+	if err := json.Unmarshal(out, structuredOutput); err != nil {
+		return fmt.Errorf("failed to unmarshal tool input: %w", err)
+	}
+	return nil
 }
 
 func (p *AnthropicProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
@@ -189,10 +188,11 @@ func (p *AnthropicProvider) CreateStructuredOutputFromParts(ctx context.Context,
 	}
 
 	maxOut := MaxTokensFromCtx(ctx, 4096)
+	toolChoice, sysBlocks := p.structuredToolChoice(p.buildSysBlocks(ctx, sysPrompt))
 	message, err := p.client.Messages.New(ctx, anthropic.MessageNewParams{
 		MaxTokens: int64(maxOut),
 		Model:     anthropic.Model(p.model),
-		System:    p.buildSysBlocks(ctx, sysPrompt),
+		System:    sysBlocks,
 		Tools: []anthropic.ToolUnionParam{
 			{
 				OfTool: &anthropic.ToolParam{
@@ -205,7 +205,7 @@ func (p *AnthropicProvider) CreateStructuredOutputFromParts(ctx context.Context,
 				},
 			},
 		},
-		ToolChoice: anthropic.ToolChoiceParamOfTool("structured_output"),
+		ToolChoice: toolChoice,
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropicPartBlocks(parts)...),
 		},
@@ -222,17 +222,15 @@ func (p *AnthropicProvider) CreateStructuredOutputFromParts(ctx context.Context,
 		return nil, fmt.Errorf("structured output stopped by the provider safety classifier (stop_reason=refusal): ask for paraphrases instead of verbatim quotes")
 	}
 
-	for _, block := range message.Content {
-		if toolUse, ok := block.AsAny().(anthropic.ToolUseBlock); ok {
-			var result map[string]any
-			if err := json.Unmarshal(toolUse.Input, &result); err != nil {
-				return nil, fmt.Errorf("unmarshal tool input (stop_reason=%s, input_len=%d): %w", message.StopReason, len(toolUse.Input), err)
-			}
-			return result, nil
-		}
+	out, err := structuredOutputJSON(message)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, fmt.Errorf("no structured output in response")
+	var result map[string]any
+	if err := json.Unmarshal(out, &result); err != nil {
+		return nil, fmt.Errorf("unmarshal tool input (stop_reason=%s, input_len=%d): %w", message.StopReason, len(out), err)
+	}
+	return result, nil
 }
 
 // anthropicPartBlocks converts a multimodal turn into Anthropic content blocks.
@@ -529,7 +527,9 @@ func (p *AnthropicProvider) CreateStructuredOutputBreakpointed(
 	}
 
 	// Two sys blocks, each marked. bp1 = end of sys; bp2 = end of mid.
-	sysBlocks := []anthropic.TextBlockParam{
+	// The nudge block structuredToolChoice may append rides after bp2, so the
+	// cached prefix is unchanged.
+	toolChoice, sysBlocks := p.structuredToolChoice([]anthropic.TextBlockParam{
 		{
 			Text:         sysPrompt,
 			CacheControl: anthropic.NewCacheControlEphemeralParam(),
@@ -538,7 +538,7 @@ func (p *AnthropicProvider) CreateStructuredOutputBreakpointed(
 			Text:         stableMid,
 			CacheControl: anthropic.NewCacheControlEphemeralParam(),
 		},
-	}
+	})
 
 	message, err := p.client.Messages.New(ctx, anthropic.MessageNewParams{
 		MaxTokens: 4096,
@@ -557,7 +557,7 @@ func (p *AnthropicProvider) CreateStructuredOutputBreakpointed(
 				},
 			},
 		},
-		ToolChoice: anthropic.ToolChoiceParamOfTool("structured_output"),
+		ToolChoice: toolChoice,
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(dynamicTail)),
 		},
@@ -567,15 +567,67 @@ func (p *AnthropicProvider) CreateStructuredOutputBreakpointed(
 	}
 	p.emitUsage(ctx, message, sysPrompt+"\n\n"+stableMid, dynamicTail)
 
-	for _, block := range message.Content {
-		if toolUse, ok := block.AsAny().(anthropic.ToolUseBlock); ok {
-			if err := json.Unmarshal(toolUse.Input, structuredOutput); err != nil {
-				return fmt.Errorf("failed to unmarshal tool input: %w", err)
-			}
-			return nil
+	out, err := structuredOutputJSON(message)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(out, structuredOutput); err != nil {
+		return fmt.Errorf("failed to unmarshal tool input: %w", err)
+	}
+	return nil
+}
+
+// structuredOutputNudge asks for the structured_output call on a model that
+// can't be forced to make it.
+const structuredOutputNudge = "Answer by calling the structured_output tool exactly once. Never answer in plain text."
+
+// structuredToolChoice forces the structured_output tool where the model
+// allows it. Elsewhere it returns auto, capped at one call, and appends
+// structuredOutputNudge to sys.
+func (p *AnthropicProvider) structuredToolChoice(sys []anthropic.TextBlockParam) (anthropic.ToolChoiceUnionParam, []anthropic.TextBlockParam) {
+	if anthropicForcesToolChoice(p.model) {
+		return anthropic.ToolChoiceParamOfTool("structured_output"), sys
+	}
+	auto := anthropic.ToolChoiceUnionParam{OfAuto: &anthropic.ToolChoiceAutoParam{DisableParallelToolUse: anthropic.Bool(true)}}
+	return auto, append(sys, anthropic.TextBlockParam{Text: structuredOutputNudge})
+}
+
+// anthropicForcesToolChoice reports whether model accepts a forced
+// tool_choice (any / tool). Claude Fable 5.1, Opus 5.5 and Sonnet 5.5 reject
+// one with a 400 ("tool_choice: type \"tool\" and \"any\" are not supported
+// for this model."). The list names the older models that accept it, so a
+// model released later gets auto with no code change.
+func anthropicForcesToolChoice(model string) bool {
+	for _, family := range []string{"claude-3", "claude-haiku-4", "claude-sonnet-4", "claude-opus-4"} {
+		if strings.HasPrefix(model, family) {
+			return true
 		}
 	}
-	return fmt.Errorf("no structured output in response")
+	switch model {
+	case "claude-fable-5", "claude-mythos-5", "claude-opus-5", "claude-sonnet-5":
+		return true
+	}
+	return false
+}
+
+// structuredOutputJSON returns the structured_output payload in msg: the tool
+// call's input or, when an unforced model answered in text instead, the JSON
+// object in that text.
+func structuredOutputJSON(msg *anthropic.Message) (json.RawMessage, error) {
+	var text strings.Builder
+	for _, block := range msg.Content {
+		switch b := block.AsAny().(type) {
+		case anthropic.ToolUseBlock:
+			return b.Input, nil
+		case anthropic.TextBlock:
+			text.WriteString(b.Text)
+		}
+	}
+	s := text.String()
+	if i, j := strings.Index(s, "{"), strings.LastIndex(s, "}"); i >= 0 && j > i && json.Valid([]byte(s[i:j+1])) {
+		return json.RawMessage(s[i : j+1]), nil
+	}
+	return nil, fmt.Errorf("no structured output in response (stop_reason=%s): the model answered in text without calling structured_output: %q", msg.StopReason, truncate(s, 200))
 }
 
 func (p *AnthropicProvider) emitUsage(ctx context.Context, msg *anthropic.Message, sysPrompt, userPrompt string) {

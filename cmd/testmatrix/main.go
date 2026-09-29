@@ -68,6 +68,8 @@ var leafSubtests = func() map[string]bool {
 	}
 	m["StreamWithChan"] = true
 	m["VideoGenerate_MinimaxH3Max"] = true
+	m["StructuredOutput_Sonnet55"] = true
+	m["StructuredOutputFromSchema_Sonnet55"] = true
 	m["ImageToVideo"] = true
 	m["TTSFX"] = true
 	m["TTMusic"] = true
@@ -99,6 +101,7 @@ var chatReasonCaps = map[string]bool{
 
 var rows = []row{
 	{provider: "Anthropic", model: "claude-haiku-4-5", testPrefix: "TestAnthropicChat_Integration", only: chatReasonCaps},
+	{provider: "Anthropic", model: "claude-sonnet-5-5", testPrefix: "TestAnthropicChat_Integration", only: map[string]bool{"StructuredOutput": true, "StructuredOutputFromSchema": true}, alias: map[string]string{"StructuredOutput": "StructuredOutput_Sonnet55", "StructuredOutputFromSchema": "StructuredOutputFromSchema_Sonnet55"}},
 	{provider: "OpenAI", model: "gpt-4o-mini", testPrefix: "TestOpenAI_Integration", only: chatCaps},
 	{provider: "OpenAI", model: "gpt-5-mini", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Reasoning": true}},
 	{provider: "OpenAI", model: "text-embedding-3-small", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Embeddings": true}},
