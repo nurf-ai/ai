@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.14.0](https://github.com/nurf-ai/ai/compare/v0.13.0...v0.14.0) (2026-09-29)
+
+
+### Features
+
+* **models:** add claude-sonnet-5-5, claude-opus-5-5, claude-fable-5-1 ([9d4b8c9](https://github.com/nurf-ai/ai/commit/9d4b8c904b115a314a9621b2d84d5fe4f7500d52))
+
+
+### Bug Fixes
+
+* **anthropic:** send {} input for zero-arg tool calls ([fa4ea88](https://github.com/nurf-ai/ai/commit/fa4ea88a36a639443f726148b995158eaa2c638f))
+* **anthropic:** structured output on models that reject forced tool_choice ([cac6133](https://github.com/nurf-ai/ai/commit/cac61334e65c87d69cd66ddec29d8ecfbf0dca1e))
+
 ## [0.13.0](https://github.com/nurf-ai/ai/compare/v0.12.0...v0.13.0) (2026-09-29)
 
 
