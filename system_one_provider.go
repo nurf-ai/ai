@@ -1,6 +1,9 @@
 package ai
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 const (
 	QuestionNoul   = "noul"
@@ -66,6 +69,37 @@ type SystemOneAnswer struct {
 	Legend        map[string]string  `json:"legend,omitempty"`
 	Probabilities map[string]float64 `json:"probabilities,omitempty"`
 	Confidence    float64            `json:"confidence,omitempty"`
+}
+
+// MarshalJSON writes the fields of the answer's type, its numbers always: a
+// noul of 0, a score at the lowest level and a confidence of 0 are answers,
+// and the struct's omitempty would drop them. An unknown type writes every
+// field as tagged.
+func (a SystemOneAnswer) MarshalJSON() ([]byte, error) {
+	switch a.Type {
+	case QuestionNoul:
+		return json.Marshal(struct {
+			Type string  `json:"type"`
+			Noul float64 `json:"noul"`
+		}{a.Type, a.Noul})
+	case QuestionChoice:
+		return json.Marshal(struct {
+			Type          string             `json:"type"`
+			Choice        string             `json:"choice,omitempty"`
+			Probabilities map[string]float64 `json:"probabilities,omitempty"`
+			Confidence    float64            `json:"confidence"`
+		}{a.Type, a.Choice, a.Probabilities, a.Confidence})
+	case QuestionScore:
+		return json.Marshal(struct {
+			Type          string             `json:"type"`
+			Score         float64            `json:"score"`
+			Legend        map[string]string  `json:"legend,omitempty"`
+			Probabilities map[string]float64 `json:"probabilities,omitempty"`
+			Confidence    float64            `json:"confidence"`
+		}{a.Type, a.Score, a.Legend, a.Probabilities, a.Confidence})
+	}
+	type plain SystemOneAnswer // same fields, no MarshalJSON: no recursion
+	return json.Marshal(plain(a))
 }
 
 // SystemOneRequest is the input to a System One call.
