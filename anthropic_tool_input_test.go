@@ -13,7 +13,7 @@ import (
 func TestToolInput_EmptyArgsMarshal(t *testing.T) {
 	for _, args := range []string{"", "  \n"} {
 		msg := anthropic.MessageParam{Role: "assistant", Content: []anthropic.ContentBlockParamUnion{
-			{OfToolUse: &anthropic.ToolUseBlockParam{ID: "toolu_1", Name: "palace_overview", Input: toolInput(json.RawMessage(args))}},
+			{OfToolUse: &anthropic.ToolUseBlockParam{ID: "toolu_1", Name: "get_time", Input: toolInput(json.RawMessage(args))}},
 		}}
 		b, err := json.Marshal(msg)
 		if err != nil {

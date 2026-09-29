@@ -89,7 +89,7 @@ func (p *AnthropicProvider) CreateStructuredOutput(ctx context.Context, userProm
 	// ToolInputSchemaParam struct uses json:"omitzero" so a zero-valued
 	// instance (Properties nil, Required nil) marshals as missing entirely,
 	// producing `tools.0.custom.input_schema: Field required`. Generic
-	// destinations like `*map[string]any` (used by the crystallizer) reflect
+	// destinations like `*map[string]any` reflect
 	// to a schema with NO `properties` key at all → props is nil here.
 	// Coerce to an empty map so the struct serializes as
 	// `{"type":"object","properties":{}}`, satisfying the API. The model
