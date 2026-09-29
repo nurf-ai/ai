@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/nurf-ai/ai/compare/v0.11.2...v0.12.0) (2026-09-29)
+
+
+### Features
+
+* **image:** add fal and OpenRouter image generation providers ([b14cc1b](https://github.com/nurf-ai/ai/commit/b14cc1b4d088063daf016e63e76d624eb5ae5077))
+
 ## [0.11.2](https://github.com/nurf-ai/ai/compare/v0.11.1...v0.11.2) (2026-09-29)
 
 
