@@ -161,6 +161,10 @@ func NewImageProvider(ctx context.Context, providerName, apiKey, model string) (
 		return newOpenAIImageProvider(apiKey, model), nil
 	case "gemini":
 		return newGeminiImageProvider(ctx, apiKey, model)
+	case "fal":
+		return NewFalImageProvider(apiKey, model), nil
+	case "openrouter":
+		return NewOpenRouterImageProvider(apiKey, model), nil
 	default:
 		return nil, fmt.Errorf("unsupported image provider: %s", providerName)
 	}

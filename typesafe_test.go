@@ -171,11 +171,11 @@ func TestTypesafeNoulWithCriteria(t *testing.T) {
 }
 
 func TestNewSystemOneProviderFactory(t *testing.T) {
-	p := NewSystemOneProvider("typesafe", "key")
+	p := NewSystemOneProvider("typesafe", "key", "")
 	if p == nil {
 		t.Fatal("want non-nil provider")
 	}
-	if NewSystemOneProvider("unknown", "key") != nil {
+	if NewSystemOneProvider("unknown", "key", "") != nil {
 		t.Fatal("want nil for unknown provider")
 	}
 }

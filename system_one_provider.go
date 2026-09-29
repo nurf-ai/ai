@@ -144,10 +144,14 @@ func SetSystemOneMeter(j SystemOneProvider, hook MeterHook) {
 }
 
 // NewSystemOneProvider creates a SystemOneProvider from a provider name.
-func NewSystemOneProvider(providerName, apiKey string) SystemOneProvider {
+func NewSystemOneProvider(providerName, apiKey, model string) SystemOneProvider {
 	switch providerName {
 	case "typesafe":
-		return NewTypesafeSystemOneProvider(apiKey)
+		var opts []TypesafeOption
+		if model != "" {
+			opts = append(opts, WithTypesafeModel(model))
+		}
+		return NewTypesafeSystemOneProvider(apiKey, opts...)
 	default:
 		return nil
 	}
