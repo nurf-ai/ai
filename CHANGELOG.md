@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.2](https://github.com/nurf-ai/ai/compare/v0.11.1...v0.11.2) (2026-09-29)
+
+
+### Bug Fixes
+
+* **meter:** image/video/audio/TTS/System One usage carries the debug span ([41650db](https://github.com/nurf-ai/ai/commit/41650db4495c7bacbd8ba86324b2706b8cbac341))
+* **systemone:** keep zero noul/score/confidence in answer JSON ([41650db](https://github.com/nurf-ai/ai/commit/41650db4495c7bacbd8ba86324b2706b8cbac341))
+
 ## [0.11.1](https://github.com/nurf-ai/ai/compare/v0.11.0...v0.11.1) (2026-09-27)
 
 
