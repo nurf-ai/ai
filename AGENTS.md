@@ -20,7 +20,9 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `realtime_provider.go` | `RealtimeProvider` interface, session config types, event types |
 | `openai_realtime_provider.go` | OpenAI Realtime API WebSocket client (`gpt-realtime-2`, `gpt-realtime-2-mini`) |
 | `fal.go` | fal.ai queue client (`FalClient`: submit / status / result / cancel / run) |
+| `fal_image_provider.go` | fal image generation (FLUX schnell/dev via queue API) |
 | `fal_video_provider.go` | fal video generation (LTX-2.3 image/text-to-video) |
+| `openrouter_image_provider.go` | OpenRouter image generation (unified image API, multi-provider) |
 | `minimax_video_provider.go` | MiniMax direct API video generation (H3/H3-Max, async submit+poll) |
 | `veo_video_provider.go` | Google Veo 3.1 video generation (predictLongRunning API, async) |
 | `video_provider.go` | `VideoProvider` interface, `VideoRequest` / `VideoResult`, `DataURI` |

@@ -253,6 +253,8 @@ result, err := judge.Judge(ctx, &ai.SystemOneRequest{
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
 | `NewSystemOneProvider(provider, apiKey)` | typesafe | Typed System One (noul, choice, score) |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
+| `NewFalImageProvider(apiKey, model)` | fal | Image generation (FLUX schnell/dev) |
+| `NewOpenRouterImageProvider(apiKey, model)` | openrouter | Image generation (FLUX, multi-provider) |
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
 | `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
 | `NewFalAudioProvider(apiKey, model)` | fal | Sound effects & music generation (Sonilo) |
@@ -289,6 +291,8 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | fal | `sonilo/v1.1/music` | | | | | | | | | | | | ✓ | | | | | | | | | |
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | | |
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | | ✓ | |
+| fal | `flux/schnell` | | | | | | | | | | | | | | | | ✓ | | | | | |
+| OpenRouter | `flux.2-klein-4b` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | | ✓ | |
 | MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | | — | — | |
 

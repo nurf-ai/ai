@@ -933,6 +933,98 @@ func TestHuggingFace_Integration(t *testing.T) {
 	}
 }
 
+// --- fal Image -----------------------------------------------------------
+
+func TestFalImage_Integration(t *testing.T) {
+	key := os.Getenv("FAL_API_KEY")
+	if key == "" {
+		t.Skip("FAL_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("Generate", func(t *testing.T) {
+		t.Parallel()
+		img := NewFalImageProvider(key, "", nil...)
+		img.SetMeter(newCostTracker(t))
+		b64, err := img.Generate(ctx, "a solid blue square", "", "")
+		if err != nil {
+			t.Fatalf("image generate: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty image")
+		}
+		t.Logf("image b64 len: %d", len(b64))
+	})
+
+	t.Run("Generate_PixelArtIcon", func(t *testing.T) {
+		t.Parallel()
+		img := NewFalImageProvider(key, "fal-ai/flux/schnell")
+		img.SetMeter(newCostTracker(t))
+		b64, err := img.Generate(ctx, "pixel art sword icon, 16-bit retro game style", "", "512x512")
+		if err != nil {
+			t.Fatalf("image generate: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty image")
+		}
+		t.Logf("pixel art icon b64 len: %d", len(b64))
+	})
+
+	t.Run("Generate_SmallIcon", func(t *testing.T) {
+		t.Parallel()
+		img := NewFalImageProvider(key, "fal-ai/flux/schnell")
+		img.SetMeter(newCostTracker(t))
+		b64, err := img.Generate(ctx, "simple red heart icon, flat design, minimal", "", "")
+		if err != nil {
+			t.Fatalf("image generate: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty image")
+		}
+		t.Logf("small icon b64 len: %d", len(b64))
+	})
+}
+
+// --- OpenRouter Image ----------------------------------------------------
+
+func TestOpenRouterImage_Integration(t *testing.T) {
+	key := os.Getenv("OPENROUTER_API_KEY")
+	if key == "" {
+		t.Skip("OPENROUTER_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("Generate", func(t *testing.T) {
+		t.Parallel()
+		img := NewOpenRouterImageProvider(key, "")
+		img.SetMeter(newCostTracker(t))
+		b64, err := img.Generate(ctx, "a solid blue square", "", "")
+		if err != nil {
+			t.Fatalf("image generate: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty image")
+		}
+		t.Logf("image b64 len: %d", len(b64))
+	})
+
+	t.Run("Generate_PixelArt", func(t *testing.T) {
+		t.Parallel()
+		img := NewOpenRouterImageProvider(key, "black-forest-labs/flux.2-klein-4b")
+		img.SetMeter(newCostTracker(t))
+		b64, err := img.Generate(ctx, "pixel art sword icon, 16-bit retro game style", "", "512x512")
+		if err != nil {
+			t.Fatalf("image generate: %v", err)
+		}
+		if len(b64) == 0 {
+			t.Fatal("empty image")
+		}
+		t.Logf("pixel art b64 len: %d", len(b64))
+	})
+}
+
 // --- Ollama --------------------------------------------------------------
 
 type ollamaTestModel struct {
