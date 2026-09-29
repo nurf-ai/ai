@@ -120,6 +120,8 @@ var rows = []row{
 	{provider: "fal", model: "sonilo/v1.1/music", testPrefix: "TestFalAudio_Integration", only: map[string]bool{"TTMusic": true}},
 	{provider: "fal", model: "ltx-2.3/t2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"TextToVideo": true}},
 	{provider: "fal", model: "ltx-2.3/i2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}},
+	{provider: "fal", model: "flux/schnell", testPrefix: "TestFalImage_Integration", only: map[string]bool{"ImageGenerate": true}},
+	{provider: "OpenRouter", model: "flux.2-klein-4b", testPrefix: "TestOpenRouterImage_Integration", only: map[string]bool{"ImageGenerate": true}},
 	{provider: "fal", model: "minimax/h3-max/i2v", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "VideoGenerate_MinimaxH3Max"}},
 	{provider: "MiniMax", model: "MiniMax-H3", testPrefix: "TestMinimaxVideo_Integration", only: map[string]bool{"TextToVideo": true, "VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "ImageToVideo"}},
 }
@@ -133,9 +135,11 @@ var parentToProvider = map[string]string{
 	"TestOllama_Integration":        "Ollama",
 	"TestFalAudio_Integration":      "fal",
 	"TestFal_Integration":           "fal",
-	"TestMinimaxVideo_Integration":  "MiniMax",
-	"TestVeoVideo_Integration":      "Gemini",
-	"TestRealtime_Integration":      "OpenAI",
+	"TestMinimaxVideo_Integration":      "MiniMax",
+	"TestVeoVideo_Integration":          "Gemini",
+	"TestRealtime_Integration":          "OpenAI",
+	"TestFalImage_Integration":          "fal",
+	"TestOpenRouterImage_Integration":   "OpenRouter",
 }
 
 func shortLabel(test string) string {
@@ -262,7 +266,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\n── cost ──\n")
 		var totalUSD float64
 		var totalIn, totalOut, totalCached int
-		for _, provider := range []string{"Anthropic", "OpenAI", "Gemini", "HuggingFace", "Ollama", "fal", "MiniMax"} {
+		for _, provider := range []string{"Anthropic", "OpenAI", "Gemini", "HuggingFace", "Ollama", "fal", "OpenRouter", "MiniMax"} {
 			c, ok := costs[provider]
 			if !ok {
 				continue
