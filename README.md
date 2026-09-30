@@ -179,6 +179,21 @@ res, err := music.Generate(ctx, ai.AudioRequest{
 })
 ```
 
+### Songs (TTSong)
+
+Full songs with vocals — lyrics you pass, or ones the model writes. Priced per track.
+
+```go
+songs := ai.NewFalMusicProvider(apiKey, "") // default: google/lyria-3.5
+res, err := songs.Generate(ctx, ai.MusicRequest{
+    Prompt: "80s synthpop, bright analog synths, female vocals, 118 bpm",
+    Lyrics: "[Verse]\nNeon on the water\n[Chorus]\nSing it loud", // optional
+    // Instrumental: true, // no vocals (exclusive with Lyrics)
+    // Model: "fal-ai/minimax-music/v2.6", // per-call override
+})
+// res.URL, res.Lyrics (as sung, when the model returns them), res.CostUSD
+```
+
 ### Realtime Voice
 
 Bidirectional WebSocket session for conversational voice. Streams audio in and out, supports tool calling mid-conversation, and reports per-response usage with text+audio token breakdown.
@@ -258,6 +273,7 @@ result, err := judge.Judge(ctx, &ai.SystemOneRequest{
 | `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
 | `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
 | `NewFalAudioProvider(apiKey, model)` | fal | Sound effects & music generation (Sonilo) |
+| `NewFalMusicProvider(apiKey, model)` | fal | Songs with vocals + lyrics (Lyria 3.5, MiniMax Music v2) |
 | `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
 | `NewRealtimeProvider(provider, apiKey, model)` | openai | Realtime voice (WebSocket, bidirectional audio + tool calls) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |

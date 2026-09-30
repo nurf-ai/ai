@@ -1192,6 +1192,27 @@ func TestFalAudio_Integration(t *testing.T) {
 		}
 		t.Logf("music: %s (%.1fs, $%.4f, %s)", res.URL, res.Duration, res.CostUSD, res.Elapsed)
 	})
+
+	// ~$0.10 per run (one Lyria 3.5 song, ~50s).
+	t.Run("Song", func(t *testing.T) {
+		t.Parallel()
+		p := NewFalMusicProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, MusicRequest{
+			Prompt: "a short cheerful ukulele jingle with a warm male voice",
+			Lyrics: "[Chorus]\nGood morning, sunny day",
+		})
+		if err != nil {
+			t.Fatalf("song generate: %v", err)
+		}
+		if res.URL == "" || !strings.HasPrefix(res.URL, "http") {
+			t.Fatalf("expected a hosted audio url, got %q", res.URL)
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("song: %s (%d bytes, $%.2f, %s)\n%s", res.URL, res.FileSize, res.CostUSD, res.Elapsed, res.Lyrics)
+	})
 }
 
 // --- fal video ------------------------------------------------------------

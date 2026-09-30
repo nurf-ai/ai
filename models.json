@@ -396,6 +396,12 @@
     "sonilo/v1.1/text-to-music": {
       "per_audio_second": 0.0025
     },
+    "google/lyria-3.5": {
+      "flat_per_track": 0.1
+    },
+    "fal-ai/minimax-music/v2.6": {
+      "flat_per_track": 0.15
+    },
     "fal-ai/flux/schnell": {
       "flat_per_image": 0.003
     },

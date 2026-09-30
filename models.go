@@ -40,6 +40,9 @@ type modelPricing struct {
 	AudioOutputPerMillion float64 `json:"audio_output_per_million,omitempty"`
 	// PerAudioSecond prices sound-effect generation by output duration.
 	PerAudioSecond float64 `json:"per_audio_second,omitempty"`
+	// FlatPerTrack prices one generated song or instrumental track,
+	// whatever its length.
+	FlatPerTrack float64 `json:"flat_per_track,omitempty"`
 }
 
 // IsTTSModel reports whether model is priced per character of speech input.
@@ -209,6 +212,38 @@ func EstimateAudioCost(model string, seconds float64) float64 {
 func IsAudioModel(model string) bool {
 	p, ok := pricingTable[model]
 	return ok && p.PerAudioSecond > 0
+}
+
+// EstimateMusicCost prices one song or instrumental track. Unknown models
+// are recorded as 0 (and reported via the unknown-model hook).
+func EstimateMusicCost(model string) float64 {
+	p, ok := pricingTable[model]
+	if !ok {
+		logger.Warn("unknown music model — cost recorded as 0", zap.String("model", model))
+		if unknownModelHook != nil {
+			unknownModelHook(model)
+		}
+		return 0
+	}
+	return p.FlatPerTrack
+}
+
+// IsMusicModel reports whether model is priced per generated track.
+func IsMusicModel(model string) bool {
+	p, ok := pricingTable[model]
+	return ok && p.FlatPerTrack > 0
+}
+
+// MusicModels lists every priced music model id, sorted.
+func MusicModels() []string {
+	var out []string
+	for m, p := range pricingTable {
+		if p.FlatPerTrack > 0 {
+			out = append(out, m)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // IsRealtimeModel reports whether model has audio token pricing.
