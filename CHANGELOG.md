@@ -47,7 +47,7 @@
 
 ### ⚠ BREAKING CHANGES
 
-* JudgmentProvider renamed to SystemOneProvider, all related types and functions renamed accordingly. JS API changed from surf.ai.judgment to surf.ai.systemOne.
+* JudgmentProvider renamed to SystemOneProvider, all related types and functions renamed accordingly. The JavaScript-facing names changed accordingly.
 
 ### Features
 

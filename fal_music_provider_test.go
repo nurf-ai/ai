@@ -2,10 +2,45 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
+
+// Each endpoint's own limits are held before anything is sent, as InputErrors
+// naming the field — in characters, as the endpoint counts them.
+func TestFalMusicProvider_InputLimits(t *testing.T) {
+	long := func(n int) string { return strings.Repeat("é", n) } // two bytes, one character
+	for _, tc := range []struct {
+		name  string
+		req   MusicRequest
+		field string
+	}{
+		{"empty prompt", MusicRequest{Prompt: "  "}, "prompt"},
+		{"lyrics with instrumental", MusicRequest{Prompt: "x", Lyrics: "la", Instrumental: true}, "lyrics"},
+		{"lyria: prompt and lyrics over 5000 together", MusicRequest{Prompt: long(2000), Lyrics: long(3000)}, "prompt"},
+		{"minimax: prompt under 10", MusicRequest{Prompt: "lofi", Model: "fal-ai/minimax-music/v2.6"}, "prompt"},
+		{"minimax: lyrics over 3500", MusicRequest{Prompt: "lofi hip hop beat", Lyrics: long(3501), Model: "fal-ai/minimax-music/v2.6"}, "lyrics"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newTestFalMusic(t, "", nil, nil)
+			_, err := p.Generate(context.Background(), tc.req)
+			var in *InputError
+			if !errors.As(err, &in) || in.Field != tc.field {
+				t.Fatalf("err = %v, want an InputError on %s", err, tc.field)
+			}
+		})
+	}
+	// at the limits, in characters, they pass (2,000 é is 4,000 bytes)
+	if err := checkMusicInput("google/lyria-3.5", MusicRequest{Prompt: long(2000), Lyrics: long(2980)}); err != nil {
+		t.Fatalf("within 5,000 characters: %v", err)
+	}
+	if err := checkMusicInput("fal-ai/minimax-music/v2.6", MusicRequest{Prompt: long(2000), Lyrics: long(3500)}); err != nil {
+		t.Fatalf("minimax at its limits: %v", err)
+	}
+}
 
 func newTestFalMusic(t *testing.T, model string, output any, onSubmit func(r *http.Request, body map[string]any)) *FalMusicProvider {
 	t.Helper()

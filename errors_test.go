@@ -1,6 +1,37 @@
 package ai
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
+
+// A request the model refuses as given is the caller's to fix: it must not
+// read as an outage or a spent account, and the detail must say what to change.
+func TestClassify_InvalidInput(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"checked before sending", &InputError{Model: "m/x", Field: "prompt", Msg: "must be at most 5 characters"}, "m/x: prompt must be at most 5 characters"},
+		{"fal schema 422", &FalError{Status: 422, Endpoint: "m/x", Message: "prompt: String should have at most 5000 characters"}, "m/x: prompt: String should have at most 5000 characters"},
+		{"fal 400", &FalError{Status: 400, Endpoint: "m/x", Message: "image_url: invalid url"}, "m/x: image_url: invalid url"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kind, detail := ClassifyError(fmt.Errorf("wrapped: %w", tc.err))
+			if kind != ErrInvalidInput || detail != tc.want {
+				t.Fatalf("got %v %q, want ErrInvalidInput %q", kind, detail, tc.want)
+			}
+			if kind.Retryable() || kind.Code() != "ai_invalid_input" {
+				t.Fatalf("Retryable=%v Code=%q", kind.Retryable(), kind.Code())
+			}
+		})
+	}
+	// a spent fal account still reads as billing, whatever the status
+	if kind, _ := ClassifyError(&FalError{Status: 400, Endpoint: "m/x", Message: "User is locked. Reason: TOP_UP"}); kind != ErrBilling {
+		t.Fatalf("spent account = %v, want ErrBilling", kind)
+	}
+}
 
 // A spent account and a rate limit arrive under the same status from some
 // providers, and mean opposite things: one clears by waiting, the other never

@@ -17,16 +17,16 @@ func TestWithMeterMetadata(t *testing.T) {
 	}{
 		{name: "nil kv stamps nothing", stamps: []map[string]any{nil}, want: nil},
 		{name: "empty kv stamps nothing", stamps: []map[string]any{{}}, want: nil},
-		{name: "single stamp", stamps: []map[string]any{{"surf": "tv"}}, want: map[string]any{"surf": "tv"}},
+		{name: "single stamp", stamps: []map[string]any{{"page": "a"}}, want: map[string]any{"page": "a"}},
 		{
 			name:   "later keys win, untouched keys kept",
-			stamps: []map[string]any{{"surf": "tv", "session": 1}, {"surf": "home"}},
-			want:   map[string]any{"surf": "home", "session": 1},
+			stamps: []map[string]any{{"page": "a", "session": 1}, {"page": "b"}},
+			want:   map[string]any{"page": "b", "session": 1},
 		},
 		{
 			name:   "empty stamp after a real one keeps it",
-			stamps: []map[string]any{{"surf": "tv"}, nil, {}},
-			want:   map[string]any{"surf": "tv"},
+			stamps: []map[string]any{{"page": "a"}, nil, {}},
+			want:   map[string]any{"page": "a"},
 		},
 	}
 	for _, tt := range tests {
@@ -52,21 +52,21 @@ func TestWithMeterMetadata_EmptyReturnsSameCtx(t *testing.T) {
 }
 
 func TestWithMeterMetadata_CopySemantics(t *testing.T) {
-	kv := map[string]any{"surf": "tv"}
+	kv := map[string]any{"page": "a"}
 	parent := WithMeterMetadata(context.Background(), kv)
 	child := WithMeterMetadata(parent, map[string]any{"session": 1})
 
 	// Caller mutates its map after stamping: ctx unaffected.
-	kv["surf"] = "mutated"
+	kv["page"] = "mutated"
 	// Caller mutates the copy handed back: ctx unaffected.
 	MeterMetadataFromCtx(parent)["injected"] = true
 
-	want := map[string]any{"surf": "tv"}
+	want := map[string]any{"page": "a"}
 	if got := MeterMetadataFromCtx(parent); !reflect.DeepEqual(got, want) {
 		t.Errorf("parent metadata = %v, want %v", got, want)
 	}
 	// Stamping a child never leaks back into the parent.
-	wantChild := map[string]any{"surf": "tv", "session": 1}
+	wantChild := map[string]any{"page": "a", "session": 1}
 	if got := MeterMetadataFromCtx(child); !reflect.DeepEqual(got, wantChild) {
 		t.Errorf("child metadata = %v, want %v", got, wantChild)
 	}
@@ -87,20 +87,20 @@ func TestMergeMeterMetadata(t *testing.T) {
 	}{
 		{name: "both nil", want: nil},
 		{name: "both empty", ctx: map[string]any{}, md: map[string]any{}, want: nil},
-		{name: "ctx only, nil md", ctx: map[string]any{"surf": "tv"}, want: map[string]any{"surf": "tv"}},
-		{name: "ctx only, empty md", ctx: map[string]any{"surf": "tv"}, md: map[string]any{}, want: map[string]any{"surf": "tv"}},
+		{name: "ctx only, nil md", ctx: map[string]any{"page": "a"}, want: map[string]any{"page": "a"}},
+		{name: "ctx only, empty md", ctx: map[string]any{"page": "a"}, md: map[string]any{}, want: map[string]any{"page": "a"}},
 		{name: "md only", md: map[string]any{"type": "image_gen"}, want: map[string]any{"type": "image_gen"}},
 		{
 			name: "disjoint keys union",
-			ctx:  map[string]any{"surf": "tv"},
+			ctx:  map[string]any{"page": "a"},
 			md:   map[string]any{"type": "image_gen"},
-			want: map[string]any{"surf": "tv", "type": "image_gen"},
+			want: map[string]any{"page": "a", "type": "image_gen"},
 		},
 		{
 			name: "provider keys win on overlap",
-			ctx:  map[string]any{"type": "caller", "surf": "tv"},
+			ctx:  map[string]any{"type": "caller", "page": "a"},
 			md:   map[string]any{"type": "image_gen"},
-			want: map[string]any{"type": "image_gen", "surf": "tv"},
+			want: map[string]any{"type": "image_gen", "page": "a"},
 		},
 	}
 	for _, tt := range tests {
@@ -145,7 +145,7 @@ func TestOllamaProvider_MeterMetadataEndToEnd(t *testing.T) {
 	var events []UsageEvent
 	p.SetMeter(func(ev UsageEvent) { events = append(events, ev) })
 
-	ctx := WithMeterMetadata(context.Background(), map[string]any{"surf": "tv", "blocks": "caller"})
+	ctx := WithMeterMetadata(context.Background(), map[string]any{"page": "a", "blocks": "x"})
 	ctx = WithPromptBlocks(ctx, map[string]string{"system": "be brief"})
 	if _, err := p.Chat(ctx, []Message{{Role: RoleUser, Content: "hello"}}, nil); err != nil {
 		t.Fatalf("chat: %v", err)
@@ -154,8 +154,8 @@ func TestOllamaProvider_MeterMetadataEndToEnd(t *testing.T) {
 		t.Fatalf("got %d usage events, want 1", len(events))
 	}
 	md := events[0].Metadata
-	if md["surf"] != "tv" {
-		t.Errorf(`Metadata["surf"] = %v, want "tv"`, md["surf"])
+	if md["page"] != "a" {
+		t.Errorf(`Metadata["page"] = %v, want "a"`, md["page"])
 	}
 	if _, ok := md["blocks"].(map[string]BlockSize); !ok {
 		t.Errorf(`Metadata["blocks"] = %T, want provider blocks to win over the stamped value`, md["blocks"])

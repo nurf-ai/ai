@@ -82,8 +82,8 @@ type MeterHook func(UsageEvent)
 // BlockSize carries the two attribution signals per prompt block: chars (raw
 // length) and tokens (tiktoken o200k_base count). Tokens are what bills you;
 // chars exist for sanity (a high tokens/chars ratio per block flags
-// tokenizer-hostile content like code, base64, or heavy unicode — surfd
-// as the "density" warning in PromptBlocksBar).
+// tokenizer-hostile content like code, base64, or heavy unicode, worth a
+// "density" warning in a UI).
 type BlockSize struct {
 	Chars  int `json:"chars"`
 	Tokens int `json:"tokens"`
@@ -146,7 +146,7 @@ func MeterOperationFromCtx(ctx context.Context) string {
 }
 
 // WithMeterMetadata stamps arbitrary key/values on the context so every
-// provider merges them into UsageEvent.Metadata (surf handle, session id,
+// provider merges them into UsageEvent.Metadata (a page or app id, session id,
 // feature flag — whatever the caller wants attributed). Stacking calls merges
 // kv over what is already stamped, later keys win, into a fresh map: the
 // stored map is copied, never mutated, and kv is copied too so the caller may

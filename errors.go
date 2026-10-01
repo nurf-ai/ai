@@ -17,7 +17,27 @@ const (
 	ErrRateLimit
 	ErrModeration
 	ErrProviderDown
+	// ErrInvalidInput: the model can't take the request as given (too long,
+	// too short, a field it doesn't know). Unlike the others it is the
+	// caller's to fix, and the detail says how.
+	ErrInvalidInput
 )
+
+// InputError is a request a model refuses as given. Providers return it
+// before anything is sent (or billed); Field names the input, Msg says what
+// to change.
+type InputError struct {
+	Model string
+	Field string
+	Msg   string
+}
+
+func (e *InputError) Error() string {
+	if e.Field == "" {
+		return e.Model + ": " + e.Msg
+	}
+	return e.Model + ": " + e.Field + " " + e.Msg
+}
 
 func ClassifyError(err error) (ErrorKind, string) {
 	if err == nil {
@@ -27,6 +47,11 @@ func ClassifyError(err error) (ErrorKind, string) {
 	var modErr *ModerationError
 	if errors.As(err, &modErr) {
 		return ErrModeration, "message flagged by content filter"
+	}
+
+	var inErr *InputError
+	if errors.As(err, &inErr) {
+		return ErrInvalidInput, inErr.Error()
 	}
 
 	var aErr *anthropic.Error
@@ -41,6 +66,11 @@ func ClassifyError(err error) (ErrorKind, string) {
 
 	var fErr *FalError
 	if errors.As(err, &fErr) {
+		// fal answers a request its input schema rejects with 400/422 and the
+		// field-level reasons; that is the caller's to fix, not an outage.
+		if (fErr.Status == 400 || fErr.Status == 422) && !outOfCredits(strings.ToLower(fErr.Message)) {
+			return ErrInvalidInput, fErr.Endpoint + ": " + fErr.Message
+		}
 		return classifyHTTP(fErr.Status, fErr.Message)
 	}
 
@@ -106,6 +136,8 @@ func (k ErrorKind) UserMessage() string {
 		return "message flagged by content filter"
 	case ErrProviderDown:
 		return "AI provider is temporarily unavailable"
+	case ErrInvalidInput:
+		return "the model can't take this input as given; change it and try again"
 	default:
 		return "something went wrong, please try again"
 	}
@@ -116,8 +148,8 @@ func (k ErrorKind) Retryable() bool {
 }
 
 // ViewerMessage is what a person who cannot fix it should read. The provider
-// account and its key are the platform's, not theirs and not the surf owner's,
-// so the only thing worth telling them is whether waiting helps. Billing and
+// account and its key belong to whoever runs the service, not to the person
+// reading, so the only thing worth telling them is whether waiting helps. Billing and
 // auth deliberately collapse into one line: "spent" and "bad key" both mean
 // the platform's setup is broken, and telling them apart is a free hint about
 // somebody's secret. The true cause travels in the logs and in Code().
@@ -129,6 +161,8 @@ func (k ErrorKind) ViewerMessage() string {
 		return "the model is unavailable right now — this is not your connection, and waiting will not clear it"
 	case ErrModeration:
 		return "message flagged by content filter"
+	case ErrInvalidInput:
+		return "the model can't take this input as given; change it and try again"
 	default:
 		return "something went wrong, please try again"
 	}
@@ -146,6 +180,8 @@ func (k ErrorKind) Code() string {
 		return "ai_unavailable"
 	case ErrModeration:
 		return "ai_flagged"
+	case ErrInvalidInput:
+		return "ai_invalid_input"
 	default:
 		return "ai_error"
 	}

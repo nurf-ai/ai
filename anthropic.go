@@ -493,7 +493,7 @@ func (p *AnthropicProvider) CreateStructuredOutputBreakpointed(
 		zap.String("provider", "anthropic"),
 		zap.String("model", p.model),
 		zap.String("outputType", fmt.Sprintf("%T", structuredOutput)),
-		zap.String("surf", "breakpointed"),
+		zap.String("cache", "breakpointed"),
 		zap.String("sysPrompt", sysPrompt),
 		zap.String("stableMid", stableMid),
 		zap.String("dynamicTail", dynamicTail),

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"go.uber.org/zap"
 )
@@ -62,6 +63,35 @@ func falMusicInput(endpoint string, req MusicRequest) map[string]any {
 	return map[string]any{"prompt": prompt}
 }
 
+// checkMusicInput holds a request to the endpoint's input schema, in
+// characters as fal counts them, so a refusal costs nothing and names the
+// field: MiniMax Music v2 takes a 10–2,000-character prompt and up to 3,500
+// characters of lyrics; Lyria takes one prompt of up to 5,000 characters —
+// with the lyrics and the instrumental ask folded in (falMusicInput).
+func checkMusicInput(endpoint string, req MusicRequest) error {
+	if strings.TrimSpace(req.Prompt) == "" {
+		return &InputError{Model: endpoint, Field: "prompt", Msg: "is required; describe the genre, mood, instruments and voice"}
+	}
+	if req.Instrumental && req.Lyrics != "" {
+		return &InputError{Model: endpoint, Field: "lyrics", Msg: "can't go with instrumental; drop one"}
+	}
+	switch {
+	case strings.HasPrefix(endpoint, "fal-ai/minimax-music/v2"):
+		if n := utf8.RuneCountInString(req.Prompt); n < 10 || n > 2000 {
+			return &InputError{Model: endpoint, Field: "prompt", Msg: fmt.Sprintf("must be 10 to 2,000 characters (it is %d)", n)}
+		}
+		if n := utf8.RuneCountInString(req.Lyrics); n > 3500 {
+			return &InputError{Model: endpoint, Field: "lyrics", Msg: fmt.Sprintf("must be at most 3,500 characters (they are %d)", n)}
+		}
+	case strings.HasPrefix(endpoint, "google/lyria"):
+		prompt, _ := falMusicInput(endpoint, req)["prompt"].(string)
+		if n := utf8.RuneCountInString(prompt); n > 5000 {
+			return &InputError{Model: endpoint, Field: "prompt", Msg: fmt.Sprintf("and lyrics together must be at most 5,000 characters (they are %d); shorten either", n)}
+		}
+	}
+	return nil
+}
+
 var lyricsSectionTag = regexp.MustCompile(`^\[\[[^\]]*\]\]$`)
 
 // cleanLyrics turns Lyria's annotated lyrics ("[[B1]]" section markers,
@@ -81,16 +111,24 @@ func cleanLyrics(s string) string {
 	return strings.TrimSpace(strings.Join(out, "\n"))
 }
 
-func (p *FalMusicProvider) Generate(ctx context.Context, req MusicRequest) (*MusicResult, error) {
-	if req.Prompt == "" {
-		return nil, fmt.Errorf("fal music: empty prompt")
-	}
-	if req.Instrumental && req.Lyrics != "" {
-		return nil, fmt.Errorf("fal music: lyrics and instrumental are exclusive")
-	}
+// CheckInput reports whether the endpoint the request would go to can take it
+// (an *InputError when not), without sending anything: callers that spend a
+// rate or quota budget per call can refuse before spending it.
+func (p *FalMusicProvider) CheckInput(req MusicRequest) error {
 	endpoint := p.model
 	if req.Model != "" {
 		endpoint = req.Model
+	}
+	return checkMusicInput(endpoint, req)
+}
+
+func (p *FalMusicProvider) Generate(ctx context.Context, req MusicRequest) (*MusicResult, error) {
+	endpoint := p.model
+	if req.Model != "" {
+		endpoint = req.Model
+	}
+	if err := checkMusicInput(endpoint, req); err != nil {
+		return nil, err
 	}
 
 	logger.Debug("fal music generate", zap.String("endpoint", endpoint),

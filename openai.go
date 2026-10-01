@@ -141,7 +141,7 @@ func (p *OpenAIProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 
 // CreateStructuredOutputBreakpointed satisfies router.CachedStructuredLLM.
 // OpenAI auto-prefix-caches any stable prefix ≥1024 tokens, so the
-// breakpointing surf is implemented by concatenating sysPrompt and
+// breakpointing surface is implemented by concatenating sysPrompt and
 // stableMid into the single system message. No explicit markers needed —
 // the byte-stable prefix is the cache key.
 //
