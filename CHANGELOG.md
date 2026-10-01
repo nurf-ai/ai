@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0](https://github.com/nurf-ai/ai/compare/v0.14.0...v0.15.0) (2026-10-01)
+
+
+### Features
+
+* music cover art, provider error wrapping, meter fixes ([3dfdfa2](https://github.com/nurf-ai/ai/commit/3dfdfa2a1849a86b7a653ecfc6aaf3c3f34c7958))
+* MusicProvider interface + fal implementation ([4bc749b](https://github.com/nurf-ai/ai/commit/4bc749b79c6169b736f90fdef90fd545ba3413a2))
+
 ## [0.14.0](https://github.com/nurf-ai/ai/compare/v0.13.0...v0.14.0) (2026-09-29)
 
 
