@@ -238,12 +238,13 @@ func (p *OllamaProvider) Chat(ctx context.Context, messages []Message, tools []T
 	}
 
 	choice := completion.Choices[0]
-	resp := &Response{Content: stripThinkTags(choice.Message.Content)}
+	resp := &Response{Content: stripThinkTags(choice.Message.Content), StopReason: openAIStopReason(string(choice.FinishReason))}
 	for _, tc := range choice.Message.ToolCalls {
 		resp.ToolCalls = append(resp.ToolCalls, ToolCall{
 			ID: tc.ID, Name: tc.Function.Name, Arguments: json.RawMessage(tc.Function.Arguments),
 		})
 	}
+	resp.cutLastToolCall()
 	return resp, nil
 }
 

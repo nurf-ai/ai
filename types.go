@@ -129,10 +129,49 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// StopMaxTokens is Response.StopReason, from every provider, when the reply
+// hit the output cap (WithMaxTokens) and was cut off.
+const StopMaxTokens = "max_tokens"
+
 // Response is the provider-agnostic result of a Chat call.
 type Response struct {
 	Content   string     `json:"content,omitempty"`
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
+	// StopReason is why the model stopped, as the provider names it
+	// ("end_turn", "stop", "tool_calls", …), except a reply the output cap
+	// cut off, which is StopMaxTokens everywhere. Empty when the provider
+	// gives none.
+	StopReason string `json:"stop_reason,omitempty"`
+	// Cut is the tool call the output cap stopped mid-write: its Arguments
+	// are incomplete. It is not in ToolCalls and must never run; it tells the
+	// caller what the model was writing when it ran out of room.
+	Cut *ToolCall `json:"cut,omitempty"`
+}
+
+// Truncated reports whether the output cap cut the reply off.
+func (r *Response) Truncated() bool { return r != nil && r.StopReason == StopMaxTokens }
+
+// cutLastToolCall moves the last tool call to Cut when the reply was cut off
+// and that call was still being written (the provider stopped inside it).
+func (r *Response) cutLastToolCall() {
+	if !r.Truncated() || len(r.ToolCalls) == 0 {
+		return
+	}
+	last := r.ToolCalls[len(r.ToolCalls)-1]
+	r.Cut = &last
+	r.ToolCalls = r.ToolCalls[:len(r.ToolCalls)-1]
+	if len(r.ToolCalls) == 0 {
+		r.ToolCalls = nil
+	}
+}
+
+// openAIStopReason maps an OpenAI-compatible finish_reason ("length" when the
+// cap cut the reply off) onto StopReason.
+func openAIStopReason(finish string) string {
+	if finish == "length" {
+		return StopMaxTokens
+	}
+	return finish
 }
 
 // extractJSONObject tries to pull a JSON object from text that may be

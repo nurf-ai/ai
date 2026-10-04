@@ -26,6 +26,7 @@ func openaiStreamLoop(ctx context.Context, raw *openai.Client, req openai.ChatCo
 	var toolCalls []ToolCall
 	toolArgsBuf := map[int]*strings.Builder{}
 	var usage openai.Usage
+	var finish string
 
 	for {
 		chunk, err := stream.Recv()
@@ -42,6 +43,9 @@ func openaiStreamLoop(ctx context.Context, raw *openai.Client, req openai.ChatCo
 
 		if len(chunk.Choices) == 0 {
 			continue
+		}
+		if f := chunk.Choices[0].FinishReason; f != "" {
+			finish = string(f)
 		}
 
 		delta := chunk.Choices[0].Delta
@@ -89,10 +93,13 @@ func openaiStreamLoop(ctx context.Context, raw *openai.Client, req openai.ChatCo
 	}
 
 	finalizeOpenAIToolCalls(&toolCalls, toolArgsBuf)
-	resp := &Response{Content: content.String()}
+	resp := &Response{Content: content.String(), StopReason: openAIStopReason(finish)}
 	if len(toolCalls) > 0 {
 		resp.ToolCalls = toolCalls
 	}
+	// tool calls stream after the text, so a cut-off reply stopped inside
+	// its last one
+	resp.cutLastToolCall()
 	return resp, usage, nil
 }
 

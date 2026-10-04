@@ -346,7 +346,7 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 	}
 
 	choice := completion.Choices[0]
-	resp := &Response{Content: choice.Message.Content}
+	resp := &Response{Content: choice.Message.Content, StopReason: openAIStopReason(string(choice.FinishReason))}
 
 	for _, tc := range choice.Message.ToolCalls {
 		resp.ToolCalls = append(resp.ToolCalls, ToolCall{
@@ -355,6 +355,7 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 			Arguments: json.RawMessage(tc.Function.Arguments),
 		})
 	}
+	resp.cutLastToolCall()
 
 	return resp, nil
 }

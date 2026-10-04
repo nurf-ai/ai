@@ -265,8 +265,8 @@ func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []T
 		return nil, fmt.Errorf("gemini chat: no candidates returned")
 	}
 
-	result := &Response{}
 	candidate := resp.Candidates[0]
+	result := &Response{StopReason: geminiStopReason(candidate.FinishReason)}
 	if candidate.Content == nil {
 		return result, nil
 	}
@@ -355,6 +355,7 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 	var content strings.Builder
 	var toolCalls []ToolCall
 	var lastResp *genai.GenerateContentResponse
+	var finish genai.FinishReason
 
 	for chunk, err := range p.client.Models.GenerateContentStream(ctx, p.model, contents, config) {
 		if err != nil {
@@ -365,6 +366,9 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 			continue
 		}
 		candidate := chunk.Candidates[0]
+		if candidate.FinishReason != "" {
+			finish = candidate.FinishReason
+		}
 		if candidate.Content == nil {
 			continue
 		}
@@ -396,11 +400,22 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 	sysText, userText := extractPrompts(messages)
 	p.emitUsage(ctx, lastResp, sysText, userText)
 
-	resp := &Response{Content: content.String()}
+	// Gemini sends each function call whole, so a cut-off reply has no
+	// half-written one to set aside: only the stop reason tells.
+	resp := &Response{Content: content.String(), StopReason: geminiStopReason(finish)}
 	if len(toolCalls) > 0 {
 		resp.ToolCalls = toolCalls
 	}
 	return resp, nil
+}
+
+// geminiStopReason maps a candidate's finish reason (MAX_TOKENS when the cap
+// cut the reply off) onto StopReason.
+func geminiStopReason(f genai.FinishReason) string {
+	if f == genai.FinishReasonMaxTokens {
+		return StopMaxTokens
+	}
+	return string(f)
 }
 
 func (p *GeminiProvider) emitUsage(ctx context.Context, resp *genai.GenerateContentResponse, sysPrompt, userPrompt string) {

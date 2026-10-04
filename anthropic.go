@@ -417,7 +417,8 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 	}
 	p.emitUsage(ctx, msg, sysText.String(), userText.String())
 
-	resp := &Response{}
+	resp := &Response{StopReason: string(msg.StopReason)}
+	lastTool := false // the cap stops inside the last block
 	for _, block := range msg.Content {
 		switch v := block.AsAny().(type) {
 		case anthropic.TextBlock:
@@ -425,13 +426,18 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 				resp.Content += "\n"
 			}
 			resp.Content += v.Text
+			lastTool = false
 		case anthropic.ToolUseBlock:
 			resp.ToolCalls = append(resp.ToolCalls, ToolCall{
 				ID:        v.ID,
 				Name:      v.Name,
 				Arguments: toolInput(json.RawMessage(v.Input)),
 			})
+			lastTool = true
 		}
+	}
+	if lastTool {
+		resp.cutLastToolCall()
 	}
 
 	return resp, nil
@@ -782,7 +788,8 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 	var toolCalls []ToolCall
 	var currentToolID, currentToolName string
 	var currentToolArgs strings.Builder
-	var inToolUse bool
+	var inToolUse, lastBlockTool bool
+	var stopReason string
 	var inputTokens, outputTokens, cacheCreate, cacheRead int64
 
 	for stream.Next() {
@@ -793,9 +800,11 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 			cacheCreate = evt.Message.Usage.CacheCreationInputTokens
 			cacheRead = evt.Message.Usage.CacheReadInputTokens
 		case anthropic.ContentBlockStartEvent:
+			lastBlockTool = false
 			switch block := evt.ContentBlock.AsAny().(type) {
 			case anthropic.ToolUseBlock:
 				inToolUse = true
+				lastBlockTool = true
 				currentToolID = block.ID
 				currentToolName = block.Name
 				currentToolArgs.Reset()
@@ -831,10 +840,16 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 			}
 		case anthropic.MessageDeltaEvent:
 			outputTokens = evt.Usage.OutputTokens
+			stopReason = string(evt.Delta.StopReason)
 		}
 	}
 	if err := stream.Err(); err != nil {
 		return nil, fmt.Errorf("anthropic stream: %w", err)
+	}
+	// The cap can end the stream inside a tool_use block, which then never
+	// sees its stop: keep it as the cut call instead of dropping it unseen.
+	if inToolUse && stopReason == StopMaxTokens {
+		toolCalls = append(toolCalls, ToolCall{ID: currentToolID, Name: currentToolName, Arguments: json.RawMessage(currentToolArgs.String())})
 	}
 
 	sysText, userText := extractPrompts(messages)
@@ -845,9 +860,12 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 		},
 	}, sysText, userText)
 
-	resp := &Response{Content: content.String()}
+	resp := &Response{Content: content.String(), StopReason: stopReason}
 	if len(toolCalls) > 0 {
 		resp.ToolCalls = toolCalls
+	}
+	if lastBlockTool {
+		resp.cutLastToolCall()
 	}
 	return resp, nil
 }
