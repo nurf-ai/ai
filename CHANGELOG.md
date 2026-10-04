@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/nurf-ai/ai/compare/v0.15.0...v0.16.0) (2026-10-04)
+
+
+### Features
+
+* say why a reply stopped; set aside a tool call the output cap cut off ([49df02c](https://github.com/nurf-ai/ai/commit/49df02c654b0c62dbc9d2be657098e92fd6a116a))
+
 ## [0.15.0](https://github.com/nurf-ai/ai/compare/v0.14.0...v0.15.0) (2026-10-01)
 
 
