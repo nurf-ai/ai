@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.17.0](https://github.com/nurf-ai/ai/compare/v0.16.0...v0.17.0) (2026-10-05)
+
+
+### Features
+
+* meter embeddings and speech-to-text; realtime usage carries its caller ([46e401a](https://github.com/nurf-ai/ai/commit/46e401aaf9ce7746badffca614d8109d79879494))
+* QuotaError for an application's own spending limit ([3cff760](https://github.com/nurf-ai/ai/commit/3cff760d99865cf61228b0751c60f59b78bbfda9))
+* ViewerMessageFor shows an application's quota message as written ([2e10114](https://github.com/nurf-ai/ai/commit/2e10114e4579762bbcede340766956d0fb0a5ddf))
+
+
+### Bug Fixes
+
+* a stream cut short still reports its usage ([edb6275](https://github.com/nurf-ai/ai/commit/edb6275c13c5ff59a1d3a35d37c79a69ca3067b8))
+* price gemini-3.1-flash-lite-image and gpt-realtime-2.1 ([9bd8e19](https://github.com/nurf-ai/ai/commit/9bd8e197dc40513002feb16c50de252b720d85c9))
+
 ## [0.16.0](https://github.com/nurf-ai/ai/compare/v0.15.0...v0.16.0) (2026-10-04)
 
 
