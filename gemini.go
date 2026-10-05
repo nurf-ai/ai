@@ -2,6 +2,8 @@ package ai
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -171,53 +173,9 @@ func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []T
 		MaxOutputTokens: int32(MaxTokensFromCtx(ctx, 4096)),
 	}
 
-	var contents []*genai.Content
-	for _, m := range messages {
-		switch m.Role {
-		case RoleSystem:
-			config.SystemInstruction = genai.NewContentFromText(m.Content, genai.RoleUser)
-
-		case RoleUser:
-			if len(m.Parts) > 0 {
-				var parts []*genai.Part
-				for _, p := range m.Parts {
-					switch v := p.(type) {
-					case ImagePart:
-						parts = append(parts, &genai.Part{
-							InlineData: &genai.Blob{
-								MIMEType: v.MediaType,
-								Data:     imagePartBytes(v),
-							},
-						})
-					case TextPart:
-						parts = append(parts, genai.NewPartFromText(v.Text))
-					}
-				}
-				contents = append(contents, &genai.Content{Parts: parts, Role: "user"})
-			} else {
-				contents = append(contents, genai.NewContentFromText(m.Content, genai.RoleUser))
-			}
-
-		case RoleAssistant:
-			var parts []*genai.Part
-			if m.Content != "" {
-				parts = append(parts, genai.NewPartFromText(m.Content))
-			}
-			for _, tc := range m.ToolCalls {
-				var args map[string]any
-				json.Unmarshal(tc.Arguments, &args) //nolint:errcheck
-				parts = append(parts, genai.NewPartFromFunctionCall(tc.Name, args))
-			}
-			contents = append(contents, &genai.Content{Parts: parts, Role: "model"})
-
-		case RoleTool:
-			var respData map[string]any
-			json.Unmarshal([]byte(m.Content), &respData) //nolint:errcheck
-			if respData == nil {
-				respData = map[string]any{"result": m.Content}
-			}
-			contents = append(contents, genai.NewContentFromFunctionResponse(m.ToolCallID, respData, genai.RoleUser))
-		}
+	contents, sys := geminiContents(messages)
+	if sys != nil {
+		config.SystemInstruction = sys
 	}
 
 	if len(tools) > 0 {
@@ -278,12 +236,7 @@ func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []T
 			result.Content += part.Text
 		}
 		if part.FunctionCall != nil {
-			args, _ := json.Marshal(part.FunctionCall.Args)
-			result.ToolCalls = append(result.ToolCalls, ToolCall{
-				ID:        part.FunctionCall.ID,
-				Name:      part.FunctionCall.Name,
-				Arguments: args,
-			})
+			result.ToolCalls = append(result.ToolCalls, geminiToolCall(part))
 		}
 	}
 
@@ -303,45 +256,9 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 		MaxOutputTokens: int32(MaxTokensFromCtx(ctx, 4096)),
 	}
 
-	var contents []*genai.Content
-	for _, m := range messages {
-		switch m.Role {
-		case RoleSystem:
-			config.SystemInstruction = genai.NewContentFromText(m.Content, genai.RoleUser)
-		case RoleUser:
-			if len(m.Parts) > 0 {
-				var parts []*genai.Part
-				for _, p := range m.Parts {
-					switch v := p.(type) {
-					case ImagePart:
-						parts = append(parts, &genai.Part{InlineData: &genai.Blob{MIMEType: v.MediaType, Data: imagePartBytes(v)}})
-					case TextPart:
-						parts = append(parts, genai.NewPartFromText(v.Text))
-					}
-				}
-				contents = append(contents, &genai.Content{Parts: parts, Role: "user"})
-			} else {
-				contents = append(contents, genai.NewContentFromText(m.Content, genai.RoleUser))
-			}
-		case RoleAssistant:
-			var parts []*genai.Part
-			if m.Content != "" {
-				parts = append(parts, genai.NewPartFromText(m.Content))
-			}
-			for _, tc := range m.ToolCalls {
-				var args map[string]any
-				json.Unmarshal(tc.Arguments, &args) //nolint:errcheck
-				parts = append(parts, genai.NewPartFromFunctionCall(tc.Name, args))
-			}
-			contents = append(contents, &genai.Content{Parts: parts, Role: "model"})
-		case RoleTool:
-			var respData map[string]any
-			json.Unmarshal([]byte(m.Content), &respData) //nolint:errcheck
-			if respData == nil {
-				respData = map[string]any{"result": m.Content}
-			}
-			contents = append(contents, genai.NewContentFromFunctionResponse(m.ToolCallID, respData, genai.RoleUser))
-		}
+	contents, sys := geminiContents(messages)
+	if sys != nil {
+		config.SystemInstruction = sys
 	}
 
 	if len(tools) > 0 {
@@ -408,9 +325,9 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 				}
 			}
 			if part.FunctionCall != nil {
-				args, _ := json.Marshal(part.FunctionCall.Args)
-				toolCalls = append(toolCalls, ToolCall{ID: part.FunctionCall.ID, Name: part.FunctionCall.Name, Arguments: args})
-				if err := cb(StreamChunk{ToolName: part.FunctionCall.Name, ToolArg: string(args)}); err != nil {
+				tc := geminiToolCall(part)
+				toolCalls = append(toolCalls, tc)
+				if err := cb(StreamChunk{ToolName: tc.Name, ToolArg: string(tc.Arguments)}); err != nil {
 					resp := &Response{Content: content.String()}
 					if len(toolCalls) > 0 {
 						resp.ToolCalls = toolCalls
@@ -431,6 +348,95 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 		resp.ToolCalls = toolCalls
 	}
 	return resp, nil
+}
+
+// geminiCallPrefix marks a tool call id ai made up: Gemini sent the call
+// without one, so the id only pairs the result with its call on this side
+// and is never sent back.
+const geminiCallPrefix = "gemini-call-"
+
+// geminiToolCall reads a function call part, keeping the thought signature
+// Gemini 3 sends with it: a call that goes back without it is refused.
+func geminiToolCall(part *genai.Part) ToolCall {
+	args, _ := json.Marshal(part.FunctionCall.Args)
+	id := part.FunctionCall.ID
+	if id == "" {
+		var b [6]byte
+		_, _ = rand.Read(b[:])
+		id = geminiCallPrefix + hex.EncodeToString(b[:])
+	}
+	return ToolCall{ID: id, Name: part.FunctionCall.Name, Arguments: args, ThoughtSignature: part.ThoughtSignature}
+}
+
+// geminiSentID is the id a call or its result carries to Gemini: its own,
+// or none for one ai made up.
+func geminiSentID(id string) string {
+	if strings.HasPrefix(id, geminiCallPrefix) {
+		return ""
+	}
+	return id
+}
+
+// geminiContents turns messages into Gemini contents and the system
+// instruction (the last system message). A function call goes back with
+// its thought signature, a tool result names the function it answers (the
+// call's name, looked up by id), and the results of one turn's calls go
+// back together in one content, as Gemini wants for parallel calls.
+func geminiContents(messages []Message) ([]*genai.Content, *genai.Content) {
+	var sys *genai.Content
+	var contents []*genai.Content
+	names := map[string]string{} // tool call id → function name
+	lastResults := false         // the last content holds tool results
+	for _, m := range messages {
+		results := false
+		switch m.Role {
+		case RoleSystem:
+			sys = genai.NewContentFromText(m.Content, genai.RoleUser)
+			results = lastResults
+		case RoleUser:
+			if len(m.Parts) > 0 {
+				contents = append(contents, &genai.Content{Parts: geminiPartsFromParts(m.Parts), Role: "user"})
+			} else {
+				contents = append(contents, genai.NewContentFromText(m.Content, genai.RoleUser))
+			}
+		case RoleAssistant:
+			var parts []*genai.Part
+			if m.Content != "" {
+				parts = append(parts, genai.NewPartFromText(m.Content))
+			}
+			for _, tc := range m.ToolCalls {
+				var args map[string]any
+				json.Unmarshal(tc.Arguments, &args) //nolint:errcheck
+				names[tc.ID] = tc.Name
+				part := genai.NewPartFromFunctionCall(tc.Name, args)
+				part.FunctionCall.ID = geminiSentID(tc.ID)
+				part.ThoughtSignature = tc.ThoughtSignature
+				parts = append(parts, part)
+			}
+			contents = append(contents, &genai.Content{Parts: parts, Role: "model"})
+		case RoleTool:
+			var respData map[string]any
+			json.Unmarshal([]byte(m.Content), &respData) //nolint:errcheck
+			if respData == nil {
+				respData = map[string]any{"result": m.Content}
+			}
+			name := names[m.ToolCallID]
+			if name == "" { // a result whose call is not in the history
+				name = m.ToolCallID
+			}
+			part := genai.NewPartFromFunctionResponse(name, respData)
+			part.FunctionResponse.ID = geminiSentID(m.ToolCallID)
+			if lastResults {
+				last := contents[len(contents)-1]
+				last.Parts = append(last.Parts, part)
+			} else {
+				contents = append(contents, &genai.Content{Parts: []*genai.Part{part}, Role: "user"})
+			}
+			results = true
+		}
+		lastResults = results
+	}
+	return contents, sys
 }
 
 // geminiStopReason maps a candidate's finish reason (MAX_TOKENS when the cap

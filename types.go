@@ -29,6 +29,10 @@ type ToolCall struct {
 	ID        string          `json:"id"`
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments"`
+	// ThoughtSignature is opaque reasoning state the provider sent with the
+	// call (Gemini 3's thought signature). Keep it when the call goes back in
+	// the history: Gemini refuses a function call that comes back without it.
+	ThoughtSignature []byte `json:"thought_signature,omitempty"`
 }
 
 // Part is a single element of a multimodal message. Sealed — only TextPart
