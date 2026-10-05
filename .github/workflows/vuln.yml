@@ -1,0 +1,30 @@
+name: Vulns
+
+# govulncheck: fails when this module's code reaches a known vulnerability
+# (vuln.go.dev, symbol level). Advisories land on deps nobody touched, so it
+# runs weekly as well as on go.mod/go.sum changes. Latest stable Go: users
+# build with their own toolchain, so only module findings are ours to fix.
+on:
+  push:
+    branches: [main]
+    paths: ['go.mod', 'go.sum', '.github/workflows/vuln.yml']
+  pull_request:
+    paths: ['go.mod', 'go.sum', '.github/workflows/vuln.yml']
+  schedule:
+    - cron: '23 6 * * 1' # Mondays 06:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
