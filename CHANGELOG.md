@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/nurf-ai/ai/compare/v0.17.0...v0.17.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* bump indirect deps (grpc, otel, x/crypto, x/net, x/text) ([54d5353](https://github.com/nurf-ai/ai/commit/54d53532d524e15fbe8af266ba8ef46119c0674d))
+
 ## [0.17.0](https://github.com/nurf-ai/ai/compare/v0.16.0...v0.17.0) (2026-10-05)
 
 
