@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.2](https://github.com/nurf-ai/ai/compare/v0.17.1...v0.17.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* **gemini:** send tool calls back with their thought signatures ([5480bec](https://github.com/nurf-ai/ai/commit/5480bec768564ef033ef503f4baec0288888868b))
+
 ## [0.17.1](https://github.com/nurf-ai/ai/compare/v0.17.0...v0.17.1) (2026-10-05)
 
 
