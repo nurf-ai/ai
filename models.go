@@ -43,6 +43,8 @@ type modelPricing struct {
 	// FlatPerTrack prices one generated song or instrumental track,
 	// whatever its length.
 	FlatPerTrack float64 `json:"flat_per_track,omitempty"`
+	// STTPerMinute prices speech-to-text by minute of input audio.
+	STTPerMinute float64 `json:"stt_per_minute,omitempty"`
 }
 
 // IsTTSModel reports whether model is priced per character of speech input.
@@ -206,6 +208,23 @@ func EstimateAudioCost(model string, seconds float64) float64 {
 		return 0
 	}
 	return p.PerAudioSecond * seconds
+}
+
+// EstimateSTTCost prices a transcription from its input audio duration.
+// Unknown models are recorded as 0 (and reported via the unknown-model hook).
+func EstimateSTTCost(model string, seconds float64) float64 {
+	p, ok := pricingTable[model]
+	if !ok {
+		logger.Warn("unknown stt model — cost recorded as 0", zap.String("model", model), zap.Float64("seconds", seconds))
+		if unknownModelHook != nil {
+			unknownModelHook(model)
+		}
+		return 0
+	}
+	if p.STTPerMinute <= 0 || seconds <= 0 {
+		return 0
+	}
+	return p.STTPerMinute * seconds / 60
 }
 
 // IsAudioModel reports whether model is priced per second of audio output.

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -29,6 +30,11 @@ type OpenAIRealtimeProvider struct {
 	meter   MeterHook
 	baseURL string // override for testing
 
+	// the caller and metering metadata stamped on the Connect ctx: usage
+	// arrives per response on the socket, long after any call ctx
+	caller    uuid.UUID
+	meterMeta map[string]any
+
 	conn      *websocket.Conn
 	connCtx   context.Context
 	events    chan RealtimeEvent
@@ -48,6 +54,8 @@ func NewOpenAIRealtimeProvider(apiKey, model string) *OpenAIRealtimeProvider {
 func (p *OpenAIRealtimeProvider) SetMeter(hook MeterHook) { p.meter = hook }
 
 func (p *OpenAIRealtimeProvider) Connect(ctx context.Context, cfg RealtimeSessionConfig) error {
+	p.caller = MeterCallerIDFromCtx(ctx)
+	p.meterMeta = MeterMetadataFromCtx(ctx)
 	model := cfg.Model
 	if model == "" {
 		model = p.model
@@ -508,7 +516,20 @@ func (p *OpenAIRealtimeProvider) parseResponseDone(raw []byte) *RealtimeEvent {
 		textOut := u.OutputTokenDetails.TextTokens
 		audioIn := u.InputTokenDetails.AudioTokens
 		audioOut := u.OutputTokenDetails.AudioTokens
+		md := map[string]any{
+			"type":             "realtime",
+			"audio_input_tok":  audioIn,
+			"audio_output_tok": audioOut,
+			"text_input_tok":   textIn,
+			"text_output_tok":  textOut,
+		}
+		for k, v := range p.meterMeta { // provider keys win
+			if _, ok := md[k]; !ok {
+				md[k] = v
+			}
+		}
 		p.meter(UsageEvent{
+			CallerID:         p.caller,
 			Provider:         "openai",
 			Model:            p.model,
 			Operation:        "realtime",
@@ -516,13 +537,7 @@ func (p *OpenAIRealtimeProvider) parseResponseDone(raw []byte) *RealtimeEvent {
 			OutputTokens:     u.OutputTokens,
 			TotalTokens:      u.TotalTokens,
 			EstimatedCostUSD: EstimateRealtimeCost(p.model, textIn, textOut, audioIn, audioOut),
-			Metadata: map[string]any{
-				"type":             "realtime",
-				"audio_input_tok":  audioIn,
-				"audio_output_tok": audioOut,
-				"text_input_tok":   textIn,
-				"text_output_tok":  textOut,
-			},
+			Metadata:         md,
 		})
 	}
 

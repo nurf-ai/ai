@@ -15,7 +15,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `gemini_image_provider.go` | Gemini image generation |
 | `gemini_video_provider.go` | Gemini video generation (Omni Flash, Interactions API) |
 | `openai_image_provider.go` | OpenAI image generation/editing |
-| `openai_stt_provider.go` | OpenAI speech-to-text |
+| `openai_stt_provider.go` | OpenAI speech-to-text, metered by minute of audio (`SetSTTMeter`) |
 | `openai_tts_provider.go` | OpenAI text-to-speech (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) |
 | `realtime_provider.go` | `RealtimeProvider` interface, session config types, event types |
 | `openai_realtime_provider.go` | OpenAI Realtime API WebSocket client (`gpt-realtime-2`, `gpt-realtime-2-mini`) |
@@ -46,6 +46,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `parts.go` | `StructuredOutputFromParts`, `MultimodalStructuredProvider`, multimodal helpers |
 | `stream.go` | `Stream`, `StreamWithChan`, `StreamChunk`, `StreamResult`, `StreamingProvider` |
 | `stream_openai.go` | OpenAI SSE streaming loop (internal) |
+| `stream_partial.go` | Usage of a stream cut short (stopped, cancelled, dropped): marked `partial`, estimated where the provider sent no counts |
 | `errors.go` | Sentinel errors |
 | `logger.go` | Package-level zap logger |
 

@@ -438,11 +438,38 @@ func (p *OpenAIProvider) EmbedText(ctx context.Context, texts []string) ([][]flo
 	if err != nil {
 		return nil, err
 	}
+	p.emitEmbeddingUsage(ctx, texts, resp.Usage.PromptTokens)
 	out := make([][]float32, len(resp.Data))
 	for i, d := range resp.Data {
 		out[i] = d.Embedding
 	}
 	return out, nil
+}
+
+// emitEmbeddingUsage meters one embeddings call. The operation is always
+// "embeddings", whatever the caller stamped, so the call is never counted
+// as chat; the API's token count is used when it sends one.
+func (p *OpenAIProvider) emitEmbeddingUsage(ctx context.Context, texts []string, tokens int) {
+	if p.meter == nil {
+		return
+	}
+	md := map[string]any{}
+	if tokens <= 0 {
+		tokens = CountTokens(strings.Join(texts, "\n"))
+		md["estimated"] = true
+	}
+	ev := UsageEvent{
+		CallerID:         MeterCallerIDFromCtx(ctx),
+		Provider:         "openai",
+		Model:            defaultEmbeddingModel,
+		Operation:        "embeddings",
+		InputTokens:      tokens,
+		TotalTokens:      tokens,
+		EstimatedCostUSD: EstimateCostFull(defaultEmbeddingModel, tokens, 0, 0, 0),
+		DebugSpanID:      DebugSpanIDFromCtx(ctx),
+	}
+	ev.Metadata = mergeMeterMetadata(ctx, md)
+	p.meter(ev)
 }
 
 func (p *OpenAIProvider) EmbedDimensions() int { return defaultEmbeddingDims }

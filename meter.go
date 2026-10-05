@@ -291,6 +291,15 @@ func attachBlocks(ctx context.Context, ev *UsageEvent) {
 	ev.Metadata["blocks"] = out
 }
 
+// SetEmbedderMeter attaches hook to an Embedder that reports usage (the
+// OpenAI provider). When the embedder is also the chat provider, SetLLMMeter
+// already did this.
+func SetEmbedderMeter(e Embedder, hook MeterHook) {
+	if m, ok := e.(LLMMeterable); ok {
+		m.SetMeter(hook)
+	}
+}
+
 // LLMMeterable is implemented by providers that accept a meter hook.
 // SetLLMMeter uses this instead of a type-switch so new providers work
 // without updating the switch.
