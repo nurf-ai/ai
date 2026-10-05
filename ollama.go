@@ -299,6 +299,11 @@ func (p *OllamaProvider) ChatStream(ctx context.Context, messages []Message, too
 	}
 
 	resp, usage, err := openaiStreamLoop(ctx, p.raw, req, cb)
+	// a stream cut short is billed too (stream_partial.go)
+	sysText, userText := extractPrompts(messages)
+	if uctx, u, ok := openAIStreamUsage(ctx, messages, resp, usage, err != nil); ok {
+		p.emitUsage(uctx, u, sysText, userText)
+	}
 	if err != nil && !errors.Is(err, errStreamBreak) {
 		return nil, fmt.Errorf("ollama stream: %w", err)
 	}
@@ -306,7 +311,5 @@ func (p *OllamaProvider) ChatStream(ctx context.Context, messages []Message, too
 	if resp != nil {
 		resp.Content = stripThinkTags(resp.Content)
 	}
-	sysText, userText := extractPrompts(messages)
-	p.emitUsage(ctx, usage, sysText, userText)
 	return resp, nil
 }

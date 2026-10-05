@@ -34,7 +34,13 @@ func openaiStreamLoop(ctx context.Context, raw *openai.Client, req openai.ChatCo
 			break
 		}
 		if err != nil {
-			return nil, usage, err
+			// what streamed before the break, so the caller can bill it
+			resp := &Response{Content: content.String()}
+			finalizeOpenAIToolCalls(&toolCalls, toolArgsBuf)
+			if len(toolCalls) > 0 {
+				resp.ToolCalls = toolCalls
+			}
+			return resp, usage, err
 		}
 
 		if chunk.Usage != nil {

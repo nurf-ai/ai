@@ -792,6 +792,27 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 	var stopReason string
 	var inputTokens, outputTokens, cacheCreate, cacheRead int64
 
+	// A stream cut short (callback error, cancel, broken stream) is billed for
+	// the prompt read and the output written so far: report it (stream_partial.go).
+	sysText, userText := extractPrompts(messages)
+	var streamed strings.Builder
+	reported := false
+	defer func() {
+		if reported || inputTokens == 0 { // no message_start: nothing known to be billed
+			return
+		}
+		out, estimated := outputTokens, false
+		if out == 0 {
+			out, estimated = int64(CountTokens(streamed.String())), true
+		}
+		p.emitUsage(withUsageNote(ctx, true, estimated), &anthropic.Message{
+			Usage: anthropic.Usage{
+				InputTokens: inputTokens, OutputTokens: out,
+				CacheCreationInputTokens: cacheCreate, CacheReadInputTokens: cacheRead,
+			},
+		}, sysText, userText)
+	}()
+
 	for stream.Next() {
 		event := stream.Current()
 		switch evt := event.AsAny().(type) {
@@ -811,8 +832,11 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 			}
 		case anthropic.ContentBlockDeltaEvent:
 			switch delta := evt.Delta.AsAny().(type) {
+			case anthropic.ThinkingDelta:
+				streamed.WriteString(delta.Thinking) // billed as output, never shown
 			case anthropic.TextDelta:
 				content.WriteString(delta.Text)
+				streamed.WriteString(delta.Text)
 				if err := cb(StreamChunk{Text: delta.Text}); err != nil {
 					resp := &Response{Content: content.String()}
 					if len(toolCalls) > 0 {
@@ -822,6 +846,7 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 				}
 			case anthropic.InputJSONDelta:
 				currentToolArgs.WriteString(delta.PartialJSON)
+				streamed.WriteString(delta.PartialJSON)
 				if err := cb(StreamChunk{ToolName: currentToolName, ToolArg: delta.PartialJSON}); err != nil {
 					resp := &Response{Content: content.String()}
 					if len(toolCalls) > 0 {
@@ -852,10 +877,15 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 		toolCalls = append(toolCalls, ToolCall{ID: currentToolID, Name: currentToolName, Arguments: json.RawMessage(currentToolArgs.String())})
 	}
 
-	sysText, userText := extractPrompts(messages)
-	p.emitUsage(ctx, &anthropic.Message{
+	// a body that just ends early never sent its message_delta: estimate
+	out, estimated := outputTokens, false
+	if out == 0 && streamed.Len() > 0 {
+		out, estimated = int64(CountTokens(streamed.String())), true
+	}
+	reported = true
+	p.emitUsage(withUsageNote(ctx, false, estimated), &anthropic.Message{
 		Usage: anthropic.Usage{
-			InputTokens: inputTokens, OutputTokens: outputTokens,
+			InputTokens: inputTokens, OutputTokens: out,
 			CacheCreationInputTokens: cacheCreate, CacheReadInputTokens: cacheRead,
 		},
 	}, sysText, userText)

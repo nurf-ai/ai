@@ -411,11 +411,14 @@ func (p *HuggingFaceProvider) ChatStream(ctx context.Context, messages []Message
 	}
 
 	resp, usage, err := openaiStreamLoop(ctx, p.raw, req, cb)
+	// a stream cut short is billed too (stream_partial.go)
+	cut := err != nil
+	sysText, userText := extractPrompts(messages)
+	if uctx, u, ok := openAIStreamUsage(ctx, messages, resp, usage, cut); ok {
+		p.emitUsage(uctx, u, sysText, userText)
+	}
 	if err != nil && !errors.Is(err, errStreamBreak) {
 		return nil, fmt.Errorf("huggingface stream: %w", err)
 	}
-
-	sysText, userText := extractPrompts(messages)
-	p.emitUsage(ctx, usage, sysText, userText)
 	return resp, nil
 }

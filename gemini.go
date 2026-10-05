@@ -357,6 +357,30 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 	var lastResp *genai.GenerateContentResponse
 	var finish genai.FinishReason
 
+	// A stream cut short (callback error, cancel, broken stream) is billed for
+	// the prompt read and the output written so far: report it (stream_partial.go).
+	sysText, userText := extractPrompts(messages)
+	reported := false
+	defer func() {
+		if reported {
+			return
+		}
+		if lastResp != nil && lastResp.UsageMetadata != nil && lastResp.UsageMetadata.PromptTokenCount > 0 {
+			p.emitUsage(withUsageNote(ctx, true, false), lastResp, sysText, userText)
+			return
+		}
+		sofar := &Response{Content: content.String(), ToolCalls: toolCalls}
+		if !streamedAnything(sofar) {
+			return
+		}
+		p.emitUsage(withUsageNote(ctx, true, true), &genai.GenerateContentResponse{
+			UsageMetadata: &genai.GenerateContentResponseUsageMetadata{
+				PromptTokenCount:     int32(promptTokens(messages)),
+				CandidatesTokenCount: int32(streamedTokens(sofar)),
+			},
+		}, sysText, userText)
+	}()
+
 	for chunk, err := range p.client.Models.GenerateContentStream(ctx, p.model, contents, config) {
 		if err != nil {
 			return nil, fmt.Errorf("gemini stream: %w", err)
@@ -397,7 +421,7 @@ func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, too
 		}
 	}
 
-	sysText, userText := extractPrompts(messages)
+	reported = true
 	p.emitUsage(ctx, lastResp, sysText, userText)
 
 	// Gemini sends each function call whole, so a cut-off reply has no
