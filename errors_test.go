@@ -49,6 +49,12 @@ func TestClassify_Quota(t *testing.T) {
 	if kind.ViewerMessage() == ErrUnknown.ViewerMessage() || kind.UserMessage() == ErrUnknown.UserMessage() {
 		t.Fatal("quota reads as a generic failure")
 	}
+	if got := ViewerMessageFor(err); got != "daily limit reached; resets at 00:00 UTC" {
+		t.Fatalf("ViewerMessageFor = %q, want the application's message", got)
+	}
+	if got := ViewerMessageFor(&FalError{Status: 503, Message: "down"}); got != ErrProviderDown.ViewerMessage() {
+		t.Fatalf("ViewerMessageFor(outage) = %q", got)
+	}
 }
 
 // A spent account and a rate limit arrive under the same status from some

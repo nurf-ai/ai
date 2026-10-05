@@ -193,6 +193,18 @@ func (k ErrorKind) ViewerMessage() string {
 	}
 }
 
+// ViewerMessageFor is what a person who cannot fix err should read: the
+// application's own words for a QuotaError (it wrote them for that person,
+// with when the limit resets), the kind's ViewerMessage otherwise.
+func ViewerMessageFor(err error) string {
+	var qErr *QuotaError
+	if errors.As(err, &qErr) && qErr.Msg != "" {
+		return qErr.Msg
+	}
+	kind, _ := ClassifyError(err)
+	return kind.ViewerMessage()
+}
+
 // Code is the stable, greppable name of what happened: the field to switch on
 // in a client, a log query or a dashboard, since the prose deliberately does
 // not distinguish. `ai_unavailable` means stop retrying — a person has to fix
