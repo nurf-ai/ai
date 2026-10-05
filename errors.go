@@ -3,6 +3,7 @@ package ai
 import (
 	"errors"
 	"strings"
+	"time"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	openai "github.com/sashabaranov/go-openai"
@@ -21,7 +22,22 @@ const (
 	// too short, a field it doesn't know). Unlike the others it is the
 	// caller's to fix, and the detail says how.
 	ErrInvalidInput
+	// ErrQuota: the application's own spending limit for this caller is
+	// reached. Nothing went to a provider and no provider account is
+	// involved; the limit lifts when it resets, and the detail says when.
+	ErrQuota
 )
+
+// QuotaError is what an application returns, before a call is sent, when
+// the caller's own spending limit is reached. Msg is written for the caller
+// and safe to show them; RetryAfter is how long until the limit resets (0
+// when unknown).
+type QuotaError struct {
+	Msg        string
+	RetryAfter time.Duration
+}
+
+func (e *QuotaError) Error() string { return e.Msg }
 
 // InputError is a request a model refuses as given. Providers return it
 // before anything is sent (or billed); Field names the input, Msg says what
@@ -52,6 +68,11 @@ func ClassifyError(err error) (ErrorKind, string) {
 	var inErr *InputError
 	if errors.As(err, &inErr) {
 		return ErrInvalidInput, inErr.Error()
+	}
+
+	var qErr *QuotaError
+	if errors.As(err, &qErr) {
+		return ErrQuota, qErr.Msg
 	}
 
 	var aErr *anthropic.Error
@@ -138,6 +159,8 @@ func (k ErrorKind) UserMessage() string {
 		return "AI provider is temporarily unavailable"
 	case ErrInvalidInput:
 		return "the model can't take this input as given; change it and try again"
+	case ErrQuota:
+		return "usage limit reached; it lifts when the limit resets"
 	default:
 		return "something went wrong, please try again"
 	}
@@ -163,6 +186,8 @@ func (k ErrorKind) ViewerMessage() string {
 		return "message flagged by content filter"
 	case ErrInvalidInput:
 		return "the model can't take this input as given; change it and try again"
+	case ErrQuota:
+		return "you've reached your usage limit for now; it lifts when the limit resets"
 	default:
 		return "something went wrong, please try again"
 	}
@@ -182,6 +207,8 @@ func (k ErrorKind) Code() string {
 		return "ai_flagged"
 	case ErrInvalidInput:
 		return "ai_invalid_input"
+	case ErrQuota:
+		return "ai_quota"
 	default:
 		return "ai_error"
 	}

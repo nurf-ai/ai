@@ -3,6 +3,7 @@ package ai
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 // A request the model refuses as given is the caller's to fix: it must not
@@ -30,6 +31,23 @@ func TestClassify_InvalidInput(t *testing.T) {
 	// a spent fal account still reads as billing, whatever the status
 	if kind, _ := ClassifyError(&FalError{Status: 400, Endpoint: "m/x", Message: "User is locked. Reason: TOP_UP"}); kind != ErrBilling {
 		t.Fatalf("spent account = %v, want ErrBilling", kind)
+	}
+}
+
+// A limit the application set for the caller is neither an outage nor a
+// spent provider account: it must not be retried in a loop, and the
+// application's own message (when it resets) is the detail.
+func TestClassify_Quota(t *testing.T) {
+	err := fmt.Errorf("guard: %w", &QuotaError{Msg: "daily limit reached; resets at 00:00 UTC", RetryAfter: time.Hour})
+	kind, detail := ClassifyError(err)
+	if kind != ErrQuota || detail != "daily limit reached; resets at 00:00 UTC" {
+		t.Fatalf("got %v %q, want ErrQuota with the application's message", kind, detail)
+	}
+	if kind.Retryable() || kind.Code() != "ai_quota" {
+		t.Fatalf("Retryable=%v Code=%q", kind.Retryable(), kind.Code())
+	}
+	if kind.ViewerMessage() == ErrUnknown.ViewerMessage() || kind.UserMessage() == ErrUnknown.UserMessage() {
+		t.Fatal("quota reads as a generic failure")
 	}
 }
 
