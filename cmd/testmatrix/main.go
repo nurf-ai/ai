@@ -124,8 +124,8 @@ var rows = []row{
 	{provider: "fal", model: "ltx-2.3/t2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"TextToVideo": true}},
 	{provider: "fal", model: "ltx-2.3/i2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}},
 	{provider: "fal", model: "flux/schnell", testPrefix: "TestFalImage_Integration", only: map[string]bool{"ImageGenerate": true}},
-	{provider: "OpenRouter", model: "flux.2-klein-4b", testPrefix: "TestOpenRouterImage_Integration", only: map[string]bool{"ImageGenerate": true}},
 	{provider: "fal", model: "minimax/h3-max/i2v", testPrefix: "TestFal_Integration", only: map[string]bool{"VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "VideoGenerate_MinimaxH3Max"}},
+	{provider: "OpenRouter", model: "flux.2-klein-4b", testPrefix: "TestOpenRouterImage_Integration", only: map[string]bool{"ImageGenerate": true}},
 	{provider: "MiniMax", model: "MiniMax-H3", testPrefix: "TestMinimaxVideo_Integration", only: map[string]bool{"TextToVideo": true, "VideoGenerate": true}, alias: map[string]string{"VideoGenerate": "ImageToVideo"}},
 }
 

@@ -18,7 +18,14 @@
       "input_per_million": 2.0,
       "output_per_million": 10.0,
       "cache_creation_per_million": 2.5,
-      "cache_read_per_million": 0.2,
+      "cache_read_per_million": 0.1,
+      "max_input_tokens": 1000000
+    },
+    "claude-haiku-5-5": {
+      "input_per_million": 0.1,
+      "output_per_million": 0.5,
+      "cache_creation_per_million": 0.125,
+      "cache_read_per_million": 0.01,
       "max_input_tokens": 1000000
     },
     "claude-fable-5": {
@@ -140,21 +147,52 @@
     }
   },
   "openai": {
+    "gpt-6-astra": {
+      "input_per_million": 10.0,
+      "output_per_million": 50.0,
+      "cache_creation_per_million": 12.5,
+      "cache_read_per_million": 1.0,
+      "max_input_tokens": 1050000
+    },
+    "gpt-6.1-sol": {
+      "input_per_million": 2.0,
+      "output_per_million": 10.0,
+      "cache_creation_per_million": 2.5,
+      "cache_read_per_million": 0.1,
+      "max_input_tokens": 1050000
+    },
+    "gpt-6-sol": {
+      "input_per_million": 2.0,
+      "output_per_million": 10.0,
+      "cache_creation_per_million": 2.5,
+      "cache_read_per_million": 0.2,
+      "max_input_tokens": 1050000
+    },
+    "gpt-6-luna": {
+      "input_per_million": 0.1,
+      "output_per_million": 0.5,
+      "cache_creation_per_million": 0.125,
+      "cache_read_per_million": 0.01,
+      "max_input_tokens": 1050000
+    },
     "gpt-5.6-sol": {
       "input_per_million": 4.0,
       "output_per_million": 20.0,
+      "cache_creation_per_million": 5.0,
       "cache_read_per_million": 0.4,
       "max_input_tokens": 1050000
     },
     "gpt-5.6-terra": {
       "input_per_million": 2.0,
       "output_per_million": 12.0,
+      "cache_creation_per_million": 2.5,
       "cache_read_per_million": 0.2,
       "max_input_tokens": 1050000
     },
     "gpt-5.6-luna": {
       "input_per_million": 0.2,
       "output_per_million": 1.2,
+      "cache_creation_per_million": 0.25,
       "cache_read_per_million": 0.02,
       "max_input_tokens": 400000
     },
@@ -259,6 +297,7 @@
     "gpt-realtime-2": {
       "input_per_million": 4.0,
       "output_per_million": 24.0,
+      "cache_read_per_million": 0.4,
       "audio_input_per_million": 32.0,
       "audio_output_per_million": 64.0,
       "max_input_tokens": 128000
@@ -266,6 +305,7 @@
     "gpt-realtime-2.1": {
       "input_per_million": 4.0,
       "output_per_million": 24.0,
+      "cache_read_per_million": 0.4,
       "audio_input_per_million": 32.0,
       "audio_output_per_million": 64.0,
       "max_input_tokens": 128000
@@ -273,6 +313,7 @@
     "gpt-realtime-2.1-mini": {
       "input_per_million": 0.60,
       "output_per_million": 2.40,
+      "cache_read_per_million": 0.06,
       "audio_input_per_million": 10.0,
       "audio_output_per_million": 20.0,
       "max_input_tokens": 128000
@@ -289,6 +330,9 @@
     },
     "whisper-1": {
       "stt_per_minute": 0.006
+    },
+    "gpt-transcribe": {
+      "stt_per_minute": 0.0045
     },
     "gpt-4o-transcribe": {
       "stt_per_minute": 0.006

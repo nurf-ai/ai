@@ -308,8 +308,8 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | | |
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | | ✓ | |
 | fal | `flux/schnell` | | | | | | | | | | | | | | | | ✓ | | | | | |
-| OpenRouter | `flux.2-klein-4b` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | | ✓ | |
+| OpenRouter | `flux.2-klein-4b` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | | — | — | |
 
 <!-- testmatrix:end -->
