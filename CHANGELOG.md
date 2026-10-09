@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.3](https://github.com/nurf-ai/ai/compare/v0.17.2...v0.17.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* update model pricing and group provider matrix rows ([aaa073e](https://github.com/nurf-ai/ai/commit/aaa073e99b3181f2056e7dc5d42efce0a793c580))
+
 ## [0.17.2](https://github.com/nurf-ai/ai/compare/v0.17.1...v0.17.2) (2026-10-05)
 
 
