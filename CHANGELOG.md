@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.4](https://github.com/nurf-ai/ai/compare/v0.17.3...v0.17.4) (2026-10-12)
+
+
+### Bug Fixes
+
+* openai structured output sends reasoning_effort none for GPT 6 models ([6f45a9d](https://github.com/nurf-ai/ai/commit/6f45a9df66e8f7c866dcccbe4460a44995f5002f))
+
 ## [0.17.3](https://github.com/nurf-ai/ai/compare/v0.17.2...v0.17.3) (2026-10-09)
 
 
