@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"errors"
@@ -20,8 +21,8 @@ type OpenAIProvider struct {
 	moderation ModerationProvider
 	meter      MeterHook
 	// toolsNoReasoning is set after the API refuses function tools together
-	// with reasoning_effort on /v1/chat/completions (some gpt-5.x variants):
-	// tool calls then go out with reasoning_effort "none" from the start.
+	// with reasoning_effort on /v1/chat/completions (reasoning models): tool
+	// calls and structured output then go out with reasoning_effort "none".
 	toolsNoReasoning bool
 }
 
@@ -67,9 +68,23 @@ func (p *OpenAIProvider) Name() string              { return "OpenAI" }
 func (p *OpenAIProvider) Model() string             { return p.model }
 func (p *OpenAIProvider) RawClient() *openai.Client { return p.raw }
 
+// isReasoningModel reports the o-series and GPT 5 onwards (gpt-5.6-luna,
+// gpt-6-luna, gpt-6.1-sol, …): a "gpt-5" substring match missed GPT 6.
 func isReasoningModel(model string) bool {
 	m := strings.ToLower(model)
-	return strings.HasPrefix(m, "o1") || strings.HasPrefix(m, "o3") || strings.HasPrefix(m, "o4") || strings.Contains(m, "gpt-5")
+	if strings.HasPrefix(m, "o1") || strings.HasPrefix(m, "o3") || strings.HasPrefix(m, "o4") {
+		return true
+	}
+	_, rest, ok := strings.Cut(m, "gpt-")
+	if !ok {
+		return false
+	}
+	end := 0
+	for end < len(rest) && rest[end] >= '0' && rest[end] <= '9' {
+		end++
+	}
+	gen, err := strconv.Atoi(rest[:end])
+	return err == nil && gen >= 5
 }
 
 // MaxInputTokens returns the advertised input context window for p.model.
@@ -206,11 +221,17 @@ func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 		},
 		MaxCompletionTokens: maxOut,
 	}
-	if isReasoningModel(p.model) {
+	if isReasoningModel(p.model) || p.toolsNoReasoning {
 		req.ReasoningEffort = "none"
 	}
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
+	if err != nil && toolsRejectReasoning(err, true, req.ReasoningEffort) {
+		// a reasoning model isReasoningModel does not know yet: once, then sticky
+		p.toolsNoReasoning = true
+		req.ReasoningEffort = "none"
+		completion, err = p.raw.CreateChatCompletion(ctx, req)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("openai function call failed: %w", err)
 	}
