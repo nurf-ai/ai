@@ -35,7 +35,8 @@ type modelPricing struct {
 	// speech endpoint returns no usage, so characters are the only signal.
 	TTSPerMillionChars float64 `json:"tts_per_million_chars,omitempty"`
 	// AudioInputPerMillion / AudioOutputPerMillion price audio tokens in
-	// realtime (voice) models separately from text tokens.
+	// realtime (voice) models separately from text tokens. Transcription
+	// models billed by token price audio input only.
 	AudioInputPerMillion  float64 `json:"audio_input_per_million,omitempty"`
 	AudioOutputPerMillion float64 `json:"audio_output_per_million,omitempty"`
 	// PerAudioSecond prices sound-effect generation by output duration.
@@ -43,7 +44,8 @@ type modelPricing struct {
 	// FlatPerTrack prices one generated song or instrumental track,
 	// whatever its length.
 	FlatPerTrack float64 `json:"flat_per_track,omitempty"`
-	// STTPerMinute prices speech-to-text by minute of input audio.
+	// STTPerMinute prices speech-to-text by minute of input audio: models
+	// billed by duration, and a token-billed one whose call reports no tokens.
 	STTPerMinute float64 `json:"stt_per_minute,omitempty"`
 }
 
@@ -227,6 +229,20 @@ func EstimateSTTCost(model string, seconds float64) float64 {
 	return p.STTPerMinute * seconds / 60
 }
 
+// estimateSTTCostByTokens prices a transcription from the tokens the API
+// reported: audio and text input at their own rates, plus the text output.
+// ok is false when the model has no audio token price (it bills by minute of
+// audio), and the caller prices the seconds with EstimateSTTCost instead.
+func estimateSTTCostByTokens(model string, audioIn, textIn, out int) (usd float64, ok bool) {
+	p, found := pricingTable[model]
+	if !found || p.AudioInputPerMillion <= 0 {
+		return 0, false
+	}
+	return (float64(audioIn)*p.AudioInputPerMillion +
+		float64(textIn)*p.InputPerMillion +
+		float64(out)*p.OutputPerMillion) / 1_000_000, true
+}
+
 // IsAudioModel reports whether model is priced per second of audio output.
 func IsAudioModel(model string) bool {
 	p, ok := pricingTable[model]
@@ -265,10 +281,11 @@ func MusicModels() []string {
 	return out
 }
 
-// IsRealtimeModel reports whether model has audio token pricing.
+// IsRealtimeModel reports whether model prices audio tokens both ways, as
+// realtime voice models do; a transcription model prices audio input only.
 func IsRealtimeModel(model string) bool {
 	p, ok := pricingTable[model]
-	return ok && p.AudioInputPerMillion > 0
+	return ok && p.AudioInputPerMillion > 0 && p.AudioOutputPerMillion > 0
 }
 
 // EstimateImageCostByTokens prices an image generation from output tokens.

@@ -15,7 +15,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `gemini_image_provider.go` | Gemini image generation |
 | `gemini_video_provider.go` | Gemini video generation (Omni Flash, Interactions API) |
 | `openai_image_provider.go` | OpenAI image generation/editing |
-| `openai_stt_provider.go` | OpenAI speech-to-text, metered by minute of audio (`SetSTTMeter`) |
+| `openai_stt_provider.go` | OpenAI speech-to-text, metered from the usage the API reports: tokens, or seconds of audio (`SetSTTMeter`) |
 | `openai_tts_provider.go` | OpenAI text-to-speech (`gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`) |
 | `realtime_provider.go` | `RealtimeProvider` interface, session config types, event types |
 | `openai_realtime_provider.go` | OpenAI Realtime API WebSocket client (`gpt-realtime-2`, `gpt-realtime-2-mini`) |
@@ -38,7 +38,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `system_one_provider.go` | `SystemOneProvider` interface, question builders (`Noul`, `Choice`, `Score`), factory |
 | `typesafe.go` | Typesafe System One provider (Jev model) |
 | `meter.go` | Usage metering hooks, prompt block attribution |
-| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`, `EstimateRealtimeCost`) + context window lookup, loads `models.json` via `go:embed` |
+| `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`, `EstimateSTTCost`, `EstimateRealtimeCost`) + context window lookup, loads `models.json` via `go:embed` |
 | `models.json` | Per-model pricing + context windows (single source of truth) |
 | `model_limits.go` | `MaxInputTokensLLM` helper, token counting |
 | `provider.go` | Provider registry, `NewLLMProvider` factory |

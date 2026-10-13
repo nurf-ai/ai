@@ -38,6 +38,42 @@ func TestEstimateTTSCost(t *testing.T) {
 	}
 }
 
+// Token-billed transcription models price audio in, text in and text out;
+// one billed by minute of audio has no token price.
+func TestEstimateSTTCostByTokens(t *testing.T) {
+	// gpt-4o-mini-transcribe: $3/M audio in, $1.25/M text in, $5/M out
+	got, ok := estimateSTTCostByTokens("gpt-4o-mini-transcribe", 1_000_000, 100_000, 200_000)
+	if want := 3 + 0.125 + 1.0; !ok || math.Abs(got-want) > 1e-9 {
+		t.Errorf("gpt-4o-mini-transcribe = %v (ok %v), want %v", got, ok, want)
+	}
+	for _, m := range []string{"whisper-1", "gpt-transcribe", "unknown-model-xyz"} {
+		if _, ok := estimateSTTCostByTokens(m, 600, 0, 50); ok {
+			t.Errorf("%s priced by token", m)
+		}
+	}
+}
+
+// The token prices of a transcription model agree with the per-minute
+// estimate OpenAI publishes beside them: a minute of speech is 600 audio
+// tokens (1 per 100 ms) and about 200 tokens of transcript.
+func TestSTTTokenPricesMatchPerMinute(t *testing.T) {
+	for _, m := range []string{"gpt-4o-transcribe", "gpt-4o-mini-transcribe"} {
+		got, ok := estimateSTTCostByTokens(m, 600, 0, 200)
+		if want := EstimateSTTCost(m, 60); !ok || math.Abs(got-want) > 0.2*want {
+			t.Errorf("%s: a minute by tokens = %v, per minute = %v", m, got, want)
+		}
+	}
+}
+
+// Pricing audio input does not make a transcription model a realtime one.
+func TestIsRealtimeModel_Transcription(t *testing.T) {
+	for _, m := range []string{"gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"} {
+		if IsRealtimeModel(m) {
+			t.Errorf("%s classified as a realtime model", m)
+		}
+	}
+}
+
 func TestEstimateCostFull_BasicMath(t *testing.T) {
 	tests := []struct {
 		name   string
