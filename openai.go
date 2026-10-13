@@ -382,7 +382,7 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []T
 	req := openai.ChatCompletionRequest{
 		Model:               p.model,
 		Messages:            apiMessages,
-		MaxCompletionTokens: 4096,
+		MaxCompletionTokens: MaxTokensFromCtx(ctx, 4096),
 	}
 	if effort := ReasoningEffortFromCtx(ctx); effort != "" {
 		req.ReasoningEffort = effort
@@ -540,7 +540,7 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 		apiTools = append(apiTools, openai.Tool{Type: openai.ToolTypeFunction, Function: &openai.FunctionDefinition{Name: t.Name, Description: t.Description, Parameters: t.Parameters}})
 	}
 
-	req := openai.ChatCompletionRequest{Model: p.model, Messages: apiMessages, MaxCompletionTokens: 4096}
+	req := openai.ChatCompletionRequest{Model: p.model, Messages: apiMessages, MaxCompletionTokens: MaxTokensFromCtx(ctx, 4096)}
 	if effort := ReasoningEffortFromCtx(ctx); effort != "" {
 		req.ReasoningEffort = effort
 	}
