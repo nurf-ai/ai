@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.6](https://github.com/nurf-ai/ai/compare/v0.17.5...v0.17.6) (2026-10-13)
+
+
+### Bug Fixes
+
+* openai Chat and ChatStream honor WithMaxTokens ([bd0da42](https://github.com/nurf-ai/ai/commit/bd0da42096d53e8d78783ece424ddc2dbad1c79e))
+
 ## [0.17.5](https://github.com/nurf-ai/ai/compare/v0.17.4...v0.17.5) (2026-10-13)
 
 
