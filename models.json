@@ -489,6 +489,38 @@
       "flat_per_image": 0.025
     }
   },
+  "elevenlabs": {
+    "eleven_v4": {
+      "tts_per_million_chars": 80.0
+    },
+    "eleven_v4_turbo": {
+      "tts_per_million_chars": 40.0
+    },
+    "eleven_v3": {
+      "tts_per_million_chars": 80.0
+    },
+    "eleven_v3_conversational": {
+      "tts_per_million_chars": 40.0
+    },
+    "eleven_multilingual_v2": {
+      "tts_per_million_chars": 80.0
+    },
+    "eleven_flash_v2_5": {
+      "tts_per_million_chars": 40.0
+    },
+    "eleven_flash_v2": {
+      "tts_per_million_chars": 40.0
+    },
+    "scribe_v2": {
+      "stt_per_minute": 0.0036667
+    },
+    "scribe_v2_medical": {
+      "stt_per_minute": 0.0036667
+    },
+    "eleven_text_to_sound_v2": {
+      "per_audio_second": 0.002
+    }
+  },
   "minimax": {
     "MiniMax-H3": {
       "per_video_second": 0.06,

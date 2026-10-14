@@ -100,3 +100,12 @@ func TestNewEmbedder_Unsupported(t *testing.T) {
 		t.Errorf("expected nil for unsupported provider, got %v", e)
 	}
 }
+
+func TestNewSpeechProviders_ElevenLabs(t *testing.T) {
+	if _, ok := NewSTTProvider("elevenlabs", "k", "").(*ElevenLabsSTTProvider); !ok {
+		t.Error("NewSTTProvider(elevenlabs) is not ElevenLabsSTTProvider")
+	}
+	if _, ok := NewTTSProvider("elevenlabs", "k", "").(*ElevenLabsTTSProvider); !ok {
+		t.Error("NewTTSProvider(elevenlabs) is not ElevenLabsTTSProvider")
+	}
+}

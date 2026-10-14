@@ -36,6 +36,10 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `stt_provider.go` | `STTProvider` interface |
 | `tts_provider.go` | `TTSProvider` interface, `TTSRequest`, `SetTTSMeter`, `TTSMimeType` |
 | `audio_provider.go` | `AudioProvider` interface, `AudioRequest`, `AudioResult`, `SetAudioMeter` |
+| `elevenlabs.go` | ElevenLabs HTTP client shared by its providers (auth, errors, output formats) |
+| `elevenlabs_tts_provider.go` | ElevenLabs text-to-speech (`eleven_flash_v2_5`, `eleven_v3`, `eleven_v4`, …) |
+| `elevenlabs_stt_provider.go` | ElevenLabs speech-to-text (Scribe), metered from the audio duration the API reports |
+| `elevenlabs_audio_provider.go` | ElevenLabs sound effects (`eleven_text_to_sound_v2`), audio returned as a data: URI |
 | `fal_audio_provider.go` | fal audio generation (Sonilo TTSFX + TTMusic, async queue) |
 | `moderation_provider.go` | `ModerationProvider` interface |
 | `system_one_provider.go` | `SystemOneProvider` interface, question builders (`Noul`, `Choice`, `Score`), factory |
@@ -78,6 +82,7 @@ Provider model catalogs:
 - Gemini: https://ai.google.dev/gemini-api/docs/models
 - Hugging Face: https://huggingface.co/models
 - OpenRouter: https://openrouter.ai/models
+- ElevenLabs: https://elevenlabs.io/docs/models
 - Ollama: https://ollama.com/library
 
 ### Testing

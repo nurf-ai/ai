@@ -141,23 +141,27 @@ func SetLLMModeration(llm LLMProvider, m ModerationProvider) {
 	}
 }
 
-// NewSTTProvider creates an STTProvider from a provider name + API key + model.
-// Only OpenAI is supported for now — returns nil for other providers.
+// NewSTTProvider creates an STTProvider from a provider name ("openai" or
+// "elevenlabs") + API key + model. Returns nil for other providers.
 func NewSTTProvider(providerName, apiKey, model string) STTProvider {
 	switch providerName {
 	case "openai":
 		return newOpenAISTTProvider(apiKey, model)
+	case "elevenlabs":
+		return NewElevenLabsSTTProvider(apiKey, model)
 	default:
 		return nil
 	}
 }
 
-// NewTTSProvider creates a TTSProvider from a provider name + API key + model.
-// Only OpenAI is supported for now — returns nil for other providers.
+// NewTTSProvider creates a TTSProvider from a provider name ("openai" or
+// "elevenlabs") + API key + model. Returns nil for other providers.
 func NewTTSProvider(providerName, apiKey, model string) TTSProvider {
 	switch providerName {
 	case "openai":
 		return newOpenAITTSProvider(apiKey, model)
+	case "elevenlabs":
+		return NewElevenLabsTTSProvider(apiKey, model)
 	default:
 		return nil
 	}
