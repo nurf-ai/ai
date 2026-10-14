@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.18.0](https://github.com/nurf-ai/ai/compare/v0.17.6...v0.18.0) (2026-10-14)
+
+
+### Features
+
+* elevenlabs tts, stt (scribe) and sound-effect providers ([#44](https://github.com/nurf-ai/ai/issues/44)) ([06a8f1d](https://github.com/nurf-ai/ai/commit/06a8f1dd8b6ced3aebed2e431dd084403c410d31))
+* openrouter chat provider metered from reported usage.cost ([35affcd](https://github.com/nurf-ai/ai/commit/35affcdf9ef6fd1e4a9fbdb8f94c438f22016c96))
+* openrouter chat provider metered from reported usage.cost ([65b2ce8](https://github.com/nurf-ai/ai/commit/65b2ce8ebb66babb6617de10f667effcc4ab4ef3))
+
+
+### Bug Fixes
+
+* meter CreateStructuredOutput on openai, ollama, huggingface, openrouter ([41c1b1a](https://github.com/nurf-ai/ai/commit/41c1b1ac1baf32837f8032b1a350eb0ccec5f1cc))
+
 ## [0.17.6](https://github.com/nurf-ai/ai/compare/v0.17.5...v0.17.6) (2026-10-13)
 
 
