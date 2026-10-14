@@ -42,3 +42,21 @@ func TestRowPrefixesMatchParentProviders(t *testing.T) {
 		}
 	}
 }
+
+func TestGroupResult(t *testing.T) {
+	subs := []string{"A", "B"}
+	for _, tc := range []struct {
+		a, b, want string
+	}{
+		{"pass", "pass", "pass"},
+		{"pass", "fail", "fail"},
+		{"skip", "fail", "fail"},
+		{"pass", "skip", "skip"},
+		{"pass", "", ""},
+	} {
+		results := map[string]string{"T/A": tc.a, "T/B": tc.b}
+		if got := groupResult(results, "T", subs); got != tc.want {
+			t.Errorf("%s+%s = %q, want %q", tc.a, tc.b, got, tc.want)
+		}
+	}
+}

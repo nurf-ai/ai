@@ -1000,7 +1000,7 @@ func TestFalImage_Integration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	t.Run("Generate", func(t *testing.T) {
+	t.Run("ImageGenerate", func(t *testing.T) {
 		t.Parallel()
 		img := NewFalImageProvider(key, "", nil...)
 		img.SetMeter(newCostTracker(t))
@@ -1014,7 +1014,7 @@ func TestFalImage_Integration(t *testing.T) {
 		t.Logf("image b64 len: %d", len(b64))
 	})
 
-	t.Run("Generate_PixelArtIcon", func(t *testing.T) {
+	t.Run("ImageGenerate_PixelArtIcon", func(t *testing.T) {
 		t.Parallel()
 		img := NewFalImageProvider(key, "fal-ai/flux/schnell")
 		img.SetMeter(newCostTracker(t))
@@ -1028,7 +1028,7 @@ func TestFalImage_Integration(t *testing.T) {
 		t.Logf("pixel art icon b64 len: %d", len(b64))
 	})
 
-	t.Run("Generate_SmallIcon", func(t *testing.T) {
+	t.Run("ImageGenerate_SmallIcon", func(t *testing.T) {
 		t.Parallel()
 		img := NewFalImageProvider(key, "fal-ai/flux/schnell")
 		img.SetMeter(newCostTracker(t))
@@ -1053,7 +1053,7 @@ func TestOpenRouterImage_Integration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	t.Run("Generate", func(t *testing.T) {
+	t.Run("ImageGenerate", func(t *testing.T) {
 		t.Parallel()
 		img := NewOpenRouterImageProvider(key, "")
 		img.SetMeter(newCostTracker(t))
@@ -1067,7 +1067,7 @@ func TestOpenRouterImage_Integration(t *testing.T) {
 		t.Logf("image b64 len: %d", len(b64))
 	})
 
-	t.Run("Generate_PixelArt", func(t *testing.T) {
+	t.Run("ImageGenerate_PixelArt", func(t *testing.T) {
 		t.Parallel()
 		img := NewOpenRouterImageProvider(key, "black-forest-labs/flux.2-klein-4b")
 		img.SetMeter(newCostTracker(t))
