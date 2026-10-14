@@ -140,7 +140,7 @@ func (p *OpenAIProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 		msgs = append(msgs, openai.ChatCompletionMessage{Role: openai.ChatMessageRoleSystem, Content: sysPrompt})
 	}
 	msgs = append(msgs, openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, Content: userPrompt})
-	_, err := p.instructor.CreateChatCompletion(
+	resp, err := p.instructor.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
 			Model:    p.model,
@@ -148,6 +148,10 @@ func (p *OpenAIProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 		},
 		structuredOutput,
 	)
+	// instructor sums usage over its retries, and reports it on failure too
+	if resp.Usage.TotalTokens > 0 || resp.Usage.PromptTokens > 0 {
+		p.emitUsage(ctx, resp.Usage, sysPrompt, userPrompt)
+	}
 	if err != nil {
 		return fmt.Errorf("openai structured output: %w", err)
 	}

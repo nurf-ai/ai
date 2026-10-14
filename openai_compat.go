@@ -83,6 +83,7 @@ func (p *openAICompat) emitUsage(ctx context.Context, usage openai.Usage, sysPro
 }
 
 func (p *openAICompat) CreateStructuredOutput(ctx context.Context, userPrompt, sysPrompt string, structuredOutput any) error {
+	ctx = withReportedCost(ctx)
 	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (p *openAICompat) CreateStructuredOutput(ctx context.Context, userPrompt, s
 		zap.String("outputType", fmt.Sprintf("%T", structuredOutput)),
 		zap.String("sysPrompt", sysPrompt),
 	)
-	_, err := p.instructor.CreateChatCompletion(
+	resp, err := p.instructor.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
 			Model: p.model,
@@ -104,6 +105,10 @@ func (p *openAICompat) CreateStructuredOutput(ctx context.Context, userPrompt, s
 		},
 		structuredOutput,
 	)
+	// instructor sums usage over its retries, and reports it on failure too
+	if resp.Usage.TotalTokens > 0 || resp.Usage.PromptTokens > 0 {
+		p.emitUsage(ctx, resp.Usage, sysPrompt, userPrompt)
+	}
 	if err != nil {
 		return fmt.Errorf("%s structured output: %w", p.provider, err)
 	}

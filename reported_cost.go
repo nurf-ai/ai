@@ -27,8 +27,8 @@ func withReportedCost(ctx context.Context) context.Context {
 	return context.WithValue(ctx, reportedCostKey{}, &reportedCost{})
 }
 
-// reportedCostFromCtx returns the cost the provider reported for the call
-// made with ctx, if any.
+// reportedCostFromCtx returns the cost the provider reported for the
+// requests made with ctx, if any.
 func reportedCostFromCtx(ctx context.Context) (float64, bool) {
 	s, _ := ctx.Value(reportedCostKey{}).(*reportedCost)
 	if s == nil || !s.ok {
@@ -132,6 +132,7 @@ func (s *costSniffer) parse(data []byte) {
 	if json.Unmarshal(data, &body) != nil || body.Usage == nil || body.Usage.Cost == nil {
 		return
 	}
-	s.sink.usd = *body.Usage.Cost
+	// summed: one call can span several requests (instructor retries)
+	s.sink.usd += *body.Usage.Cost
 	s.sink.ok = true
 }
