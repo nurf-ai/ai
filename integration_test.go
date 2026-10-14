@@ -889,6 +889,86 @@ func TestOpenRouter_Integration(t *testing.T) {
 	}
 }
 
+// --- ElevenLabs ----------------------------------------------------------
+
+func TestElevenLabs_Integration(t *testing.T) {
+	key := os.Getenv("ELEVENLABS_API_KEY")
+	if key == "" {
+		t.Skip("ELEVENLABS_API_KEY not set")
+	}
+	t.Parallel()
+	ctx := context.Background()
+
+	synth := func(t *testing.T, tts *ElevenLabsTTSProvider, text, format string) []byte {
+		t.Helper()
+		rc, err := tts.Synthesize(ctx, TTSRequest{Text: text, Format: format})
+		if err != nil {
+			t.Fatalf("tts %s: %v", format, err)
+		}
+		defer rc.Close()
+		audio, err := io.ReadAll(rc)
+		if err != nil {
+			t.Fatalf("tts %s read: %v", format, err)
+		}
+		if len(audio) < 64 {
+			t.Fatalf("tts %s: %d bytes, expected audio", format, len(audio))
+		}
+		return audio
+	}
+
+	t.Run("STT", func(t *testing.T) {
+		t.Parallel()
+		// real speech to transcribe: synthesized, unmetered
+		audio := synth(t, NewElevenLabsTTSProvider(key, ""), "The quick brown fox jumps over the lazy dog.", "")
+		stt := NewElevenLabsSTTProvider(key, "")
+		var cost float64
+		stt.SetMeter(func(ev UsageEvent) { cost += ev.EstimatedCostUSD })
+		text, err := stt.Transcribe(ctx, bytes.NewReader(audio), "fox.mp3")
+		if err != nil {
+			t.Fatalf("stt: %v", err)
+		}
+		if !strings.Contains(strings.ToLower(text), "fox") {
+			t.Fatalf("transcript %q lacks \"fox\"", text)
+		}
+		if cost <= 0 {
+			t.Fatalf("expected cost, got %v", cost)
+		}
+		t.Logf("stt: %q ($%.6f)", text, cost)
+	})
+
+	t.Run("TTS", func(t *testing.T) {
+		t.Parallel()
+		tts := NewElevenLabsTTSProvider(key, "")
+		tts.SetMeter(newCostTracker(t))
+		mp3 := synth(t, tts, "hello from nurf", "")
+		if !(string(mp3[:3]) == "ID3" || (mp3[0] == 0xFF && mp3[1]&0xE0 == 0xE0)) {
+			t.Fatalf("mp3: bad magic % x", mp3[:4])
+		}
+		pcm := synth(t, tts, "hello from nurf", "pcm")
+		if _, err := tts.Synthesize(ctx, TTSRequest{Text: "hi", Voice: "no-such-voice"}); err == nil {
+			t.Fatal("expected error for an unknown voice")
+		}
+		t.Logf("tts: mp3 %d bytes, pcm %d bytes", len(mp3), len(pcm))
+	})
+
+	t.Run("TTSFX", func(t *testing.T) {
+		t.Parallel()
+		p := NewElevenLabsAudioProvider(key, "")
+		p.SetMeter(newCostTracker(t))
+		res, err := p.Generate(ctx, AudioRequest{Prompt: "a short door bell chime", Duration: 2})
+		if err != nil {
+			t.Fatalf("audio generate: %v", err)
+		}
+		if !strings.HasPrefix(res.URL, "data:audio/") {
+			t.Fatalf("expected an audio data uri, got %.40q", res.URL)
+		}
+		if res.CostUSD <= 0 {
+			t.Fatalf("expected cost, got %+v", res)
+		}
+		t.Logf("audio: %d bytes (%.1fs, $%.4f, %s)", res.FileSize, res.Duration, res.CostUSD, res.Elapsed)
+	})
+}
+
 // testOpenAICompatChat runs the chat capability subtests against an
 // OpenAI-compatible provider (Hugging Face, OpenRouter).
 func testOpenAICompatChat(t *testing.T, newP func() *openAICompat) {

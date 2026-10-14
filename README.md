@@ -272,9 +272,10 @@ result, err := judge.Judge(ctx, &ai.SystemOneRequest{
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewFalImageProvider(apiKey, model)` | fal | Image generation (FLUX schnell/dev) |
 | `NewOpenRouterImageProvider(apiKey, model)` | openrouter | Image generation (FLUX, multi-provider) |
-| `NewSTTProvider(provider, apiKey, model)` | openai | Speech-to-text |
-| `NewTTSProvider(provider, apiKey, model)` | openai | Text-to-speech |
+| `NewSTTProvider(provider, apiKey, model)` | openai, elevenlabs | Speech-to-text |
+| `NewTTSProvider(provider, apiKey, model)` | openai, elevenlabs | Text-to-speech |
 | `NewFalAudioProvider(apiKey, model)` | fal | Sound effects & music generation (Sonilo) |
+| `NewElevenLabsAudioProvider(apiKey, model)` | elevenlabs | Sound effects |
 | `NewFalMusicProvider(apiKey, model)` | fal | Songs with vocals + lyrics (Lyria 3.5, MiniMax Music v2) |
 | `NewVideoProvider(provider, apiKey, model)` | fal, gemini, veo, minimax | Video generation (text/image-to-video) |
 | `NewRealtimeProvider(provider, apiKey, model)` | openai | Realtime voice (WebSocket, bidirectional audio + tool calls) |
@@ -307,6 +308,9 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | | |
 | OpenRouter | `kimi-k3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
 | OpenRouter | `flux.2-klein-4b` | | | | | | | | | | | | | | | | ✓ | | | | | |
+| ElevenLabs | `scribe_v2` | | | | | | | | | ✓ | | | | | | | | | | | | |
+| ElevenLabs | `eleven_flash_v2_5` | | | | | | | | | | ✓ | | | | | | | | | | | |
+| ElevenLabs | `eleven_text_to_sound_v2` | | | | | | | | | | | ✓ | | | | | | | | | | |
 | fal | `sonilo/v1.1` | | | | | | | | | | | ✓ | | | | | | | | | | |
 | fal | `sonilo/v1.1/music` | | | | | | | | | | | | ✓ | | | | | | | | | |
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | | |
@@ -388,6 +392,7 @@ go test -tags=integration -v -run TestOpenAI ./...
 go test -tags=integration -v -run TestGemini ./...
 go test -tags=integration -v -run TestHuggingFace ./...
 go test -tags=integration -v -run TestOpenRouter ./...
+go test -tags=integration -v -run TestElevenLabs ./...
 go test -tags=integration -v -run TestOllama ./...
 ```
 

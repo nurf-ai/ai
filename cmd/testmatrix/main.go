@@ -132,6 +132,9 @@ var rows = []row{
 	{provider: "Ollama", model: "gemma4:e4b", testPrefix: "TestOllama_Integration/gemma4:e4b"},
 	{provider: "OpenRouter", model: "kimi-k3", testPrefix: "TestOpenRouter_Integration/moonshotai/kimi-k3"},
 	{provider: "OpenRouter", model: "flux.2-klein-4b", testPrefix: "TestOpenRouterImage_Integration", only: map[string]bool{"ImageGenerate": true}},
+	{provider: "ElevenLabs", model: "scribe_v2", testPrefix: "TestElevenLabs_Integration", only: map[string]bool{"STT": true}},
+	{provider: "ElevenLabs", model: "eleven_flash_v2_5", testPrefix: "TestElevenLabs_Integration", only: map[string]bool{"TTS": true}},
+	{provider: "ElevenLabs", model: "eleven_text_to_sound_v2", testPrefix: "TestElevenLabs_Integration", only: map[string]bool{"TTSFX": true}},
 	{provider: "fal", model: "sonilo/v1.1", testPrefix: "TestFalAudio_Integration", only: map[string]bool{"TTSFX": true}},
 	{provider: "fal", model: "sonilo/v1.1/music", testPrefix: "TestFalAudio_Integration", only: map[string]bool{"TTMusic": true}},
 	{provider: "fal", model: "ltx-2.3/t2v/fast", testPrefix: "TestFal_Integration", only: map[string]bool{"TextToVideo": true}},
@@ -157,6 +160,7 @@ var parentToProvider = map[string]string{
 	"TestOpenRouterImage_Integration": "OpenRouter",
 	"TestOpenRouter_Integration":      "OpenRouter",
 	"TestTypesafe_Integration":        "Typesafe",
+	"TestElevenLabs_Integration":      "ElevenLabs",
 }
 
 func shortLabel(test string) string {
@@ -283,7 +287,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\n── cost ──\n")
 		var totalUSD float64
 		var totalIn, totalOut, totalCached int
-		for _, provider := range []string{"Anthropic", "OpenAI", "Typesafe", "Gemini", "HuggingFace", "Ollama", "fal", "OpenRouter", "MiniMax"} {
+		for _, provider := range []string{"Anthropic", "OpenAI", "Typesafe", "Gemini", "HuggingFace", "Ollama", "fal", "OpenRouter", "ElevenLabs", "MiniMax"} {
 			c, ok := costs[provider]
 			if !ok {
 				continue
