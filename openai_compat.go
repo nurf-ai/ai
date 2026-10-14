@@ -13,80 +13,66 @@ import (
 	"go.uber.org/zap"
 )
 
-// DefaultHuggingFaceBaseURL is the HF Inference router's OpenAI-compatible endpoint.
-// Override via HF_BASE_URL when targeting a dedicated endpoint or a specific upstream
-// provider route (e.g. https://router.huggingface.co/<provider>/v1).
-const DefaultHuggingFaceBaseURL = "https://router.huggingface.co/v1"
-
-// HuggingFaceProvider speaks the HF Inference Router, which exposes an
-// OpenAI-compatible Chat Completions API. Models are addressed by their
-// canonical HF id (e.g. "meta-llama/Llama-3.3-70B-Instruct").
-type HuggingFaceProvider struct {
+// openAICompat is the shared core of providers that speak an
+// OpenAI-compatible Chat Completions API under their own name and
+// models.json group (Hugging Face, OpenRouter).
+type openAICompat struct {
 	instructor *instructor.InstructorOpenAI
 	raw        *openai.Client
 	model      string
 	moderation ModerationProvider
 	meter      MeterHook
+	provider   string // models.json group + UsageEvent.Provider
+	name       string // Name()
 }
 
-func (p *HuggingFaceProvider) WithModeration(m ModerationProvider) *HuggingFaceProvider {
-	p.moderation = m
-	return p
-}
-
-func (p *HuggingFaceProvider) WithMeter(hook MeterHook) *HuggingFaceProvider {
-	p.meter = hook
-	return p
-}
-
-func (p *HuggingFaceProvider) SetMeter(hook MeterHook)            { p.meter = hook }
-func (p *HuggingFaceProvider) SetModeration(m ModerationProvider) { p.moderation = m }
-
-// NewHuggingFaceProvider builds a provider against the HF router.
-// baseURL may be empty to use DefaultHuggingFaceBaseURL.
-func NewHuggingFaceProvider(apiKey, model, baseURL string) *HuggingFaceProvider {
-	if baseURL == "" {
-		baseURL = DefaultHuggingFaceBaseURL
-	}
-	cfg := openai.DefaultConfig(apiKey)
-	cfg.BaseURL = baseURL
+func newOpenAICompat(cfg openai.ClientConfig, model, provider, name string) openAICompat {
 	raw := openai.NewClientWithConfig(cfg)
 	client := instructor.FromOpenAI(
 		raw,
 		instructor.WithMode(instructor.ModeJSON),
 		instructor.WithMaxRetries(3),
 	)
-	return &HuggingFaceProvider{
+	return openAICompat{
 		instructor: client,
 		raw:        raw,
 		model:      model,
+		provider:   provider,
+		name:       name,
 	}
 }
 
-func (p *HuggingFaceProvider) Name() string              { return "HuggingFace" }
-func (p *HuggingFaceProvider) Model() string             { return p.model }
-func (p *HuggingFaceProvider) RawClient() *openai.Client { return p.raw }
+func (p *openAICompat) SetMeter(hook MeterHook)            { p.meter = hook }
+func (p *openAICompat) SetModeration(m ModerationProvider) { p.moderation = m }
+
+func (p *openAICompat) Name() string              { return p.name }
+func (p *openAICompat) Model() string             { return p.model }
+func (p *openAICompat) RawClient() *openai.Client { return p.raw }
 
 // MaxInputTokens returns the advertised input context window for p.model.
-func (p *HuggingFaceProvider) MaxInputTokens() (int64, error) {
-	return MaxInputTokensLLM("huggingface", p.model)
+func (p *openAICompat) MaxInputTokens() (int64, error) {
+	return MaxInputTokensLLM(p.provider, p.model)
 }
 
-func (p *HuggingFaceProvider) emitUsage(ctx context.Context, usage openai.Usage, sysPrompt, userPrompt string) {
+func (p *openAICompat) emitUsage(ctx context.Context, usage openai.Usage, sysPrompt, userPrompt string) {
 	if p.meter == nil {
 		return
 	}
 	in := usage.PromptTokens
 	out := usage.CompletionTokens
+	cost, reported := reportedCostFromCtx(ctx)
+	if !reported {
+		cost = EstimateCostFull(p.model, in, out, 0, 0)
+	}
 	ev := UsageEvent{
 		CallerID:         MeterCallerIDFromCtx(ctx),
-		Provider:         "huggingface",
+		Provider:         p.provider,
 		Model:            p.model,
 		Operation:        MeterOperationFromCtx(ctx),
 		InputTokens:      in,
 		OutputTokens:     out,
 		TotalTokens:      in + out,
-		EstimatedCostUSD: EstimateCostFull(p.model, in, out, 0, 0),
+		EstimatedCostUSD: cost,
 		SystemPrompt:     TruncatePromptForDebug(sysPrompt),
 		UserPrompt:       TruncatePromptForDebug(userPrompt),
 		DebugSpanID:      DebugSpanIDFromCtx(ctx),
@@ -96,12 +82,12 @@ func (p *HuggingFaceProvider) emitUsage(ctx context.Context, usage openai.Usage,
 	p.meter(ev)
 }
 
-func (p *HuggingFaceProvider) CreateStructuredOutput(ctx context.Context, userPrompt, sysPrompt string, structuredOutput any) error {
+func (p *openAICompat) CreateStructuredOutput(ctx context.Context, userPrompt, sysPrompt string, structuredOutput any) error {
 	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
 		return err
 	}
 	logger.Log(traceLevel, "structured output",
-		zap.String("provider", "huggingface"),
+		zap.String("provider", p.provider),
 		zap.String("model", p.model),
 		zap.String("userPrompt", userPrompt),
 		zap.String("outputType", fmt.Sprintf("%T", structuredOutput)),
@@ -119,23 +105,24 @@ func (p *HuggingFaceProvider) CreateStructuredOutput(ctx context.Context, userPr
 		structuredOutput,
 	)
 	if err != nil {
-		return fmt.Errorf("huggingface structured output: %w", err)
+		return fmt.Errorf("%s structured output: %w", p.provider, err)
 	}
 	return nil
 }
 
-func (p *HuggingFaceProvider) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+func (p *openAICompat) CreateStructuredOutputFromSchema(ctx context.Context, userPrompt, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
 	return p.CreateStructuredOutputFromParts(ctx, []Part{TextPart{Text: userPrompt}}, sysPrompt, schema)
 }
 
 // CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
 // multimodal user turn (text + base64 images).
-func (p *HuggingFaceProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+func (p *openAICompat) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	ctx = withReportedCost(ctx)
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
 	}
-	logger.Log(traceLevel, "structured output from schema", zap.String("provider", "huggingface"), zap.String("model", p.model), zap.Int("parts", len(parts)))
+	logger.Log(traceLevel, "structured output from schema", zap.String("provider", p.provider), zap.String("model", p.model), zap.Int("parts", len(parts)))
 
 	var schemaObj map[string]any
 	if err := json.Unmarshal(schema, &schemaObj); err != nil {
@@ -168,12 +155,12 @@ func (p *HuggingFaceProvider) CreateStructuredOutputFromParts(ctx context.Contex
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("huggingface function call failed: %w", err)
+		return nil, fmt.Errorf("%s function call failed: %w", p.provider, err)
 	}
 	p.emitUsage(ctx, completion.Usage, sysPrompt, userText)
 
 	if len(completion.Choices) == 0 {
-		return nil, fmt.Errorf("huggingface: no choices returned")
+		return nil, fmt.Errorf("%s: no choices returned", p.provider)
 	}
 
 	choice := completion.Choices[0]
@@ -196,7 +183,7 @@ func (p *HuggingFaceProvider) CreateStructuredOutputFromParts(ctx context.Contex
 		}
 	}
 
-	// Fallback: some HF-hosted models return structured JSON in content
+	// Fallback: some hosted models return structured JSON in content
 	// instead of via tool calls.
 	content := strings.TrimSpace(choice.Message.Content)
 	if content != "" {
@@ -212,7 +199,8 @@ func (p *HuggingFaceProvider) CreateStructuredOutputFromParts(ctx context.Contex
 		choice.FinishReason, len(choice.Message.ToolCalls), truncate(content, 200))
 }
 
-func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+func (p *openAICompat) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	ctx = withReportedCost(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -224,7 +212,7 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 	for i, t := range tools {
 		toolNames[i] = t.Name
 	}
-	logger.Log(traceLevel, "chat", zap.String("provider", "huggingface"), zap.String("model", p.model), zap.Int("messages", len(messages)), zap.Any("tools", toolNames))
+	logger.Log(traceLevel, "chat", zap.String("provider", p.provider), zap.String("model", p.model), zap.Int("messages", len(messages)), zap.Any("tools", toolNames))
 
 	var apiMessages []openai.ChatCompletionMessage
 	for _, m := range messages {
@@ -314,7 +302,7 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("huggingface chat failed: %w", err)
+		return nil, fmt.Errorf("%s chat failed: %w", p.provider, err)
 	}
 	// Reconstruct sys/user prompts from messages for debug capture.
 	var sysText, userText strings.Builder
@@ -342,7 +330,7 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 	p.emitUsage(ctx, completion.Usage, sysText.String(), userText.String())
 
 	if len(completion.Choices) == 0 {
-		return nil, fmt.Errorf("huggingface chat: no choices returned")
+		return nil, fmt.Errorf("%s chat: no choices returned", p.provider)
 	}
 
 	choice := completion.Choices[0]
@@ -360,7 +348,8 @@ func (p *HuggingFaceProvider) Chat(ctx context.Context, messages []Message, tool
 	return resp, nil
 }
 
-func (p *HuggingFaceProvider) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+func (p *openAICompat) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	ctx = withReportedCost(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -418,7 +407,7 @@ func (p *HuggingFaceProvider) ChatStream(ctx context.Context, messages []Message
 		p.emitUsage(uctx, u, sysText, userText)
 	}
 	if err != nil && !errors.Is(err, errStreamBreak) {
-		return nil, fmt.Errorf("huggingface stream: %w", err)
+		return nil, fmt.Errorf("%s stream: %w", p.provider, err)
 	}
 	return resp, nil
 }

@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"math"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -20,6 +21,24 @@ func TestPricingCoverage(t *testing.T) {
 		if p.MaxInputTokens == 0 {
 			t.Errorf("model %q has pricing but no max_input_tokens in models.json", model)
 		}
+	}
+}
+
+// TestDynamicPricingHasNoRates: a "pricing": "dynamic" entry is priced by
+// the cost its provider reports, so static rates on it would be dead config.
+func TestDynamicPricingHasNoRates(t *testing.T) {
+	for model, p := range pricingTable {
+		if p.Pricing != PricingDynamic {
+			continue
+		}
+		rates := p
+		rates.Pricing, rates.MaxInputTokens = "", 0
+		if !reflect.DeepEqual(rates, modelPricing{}) {
+			t.Errorf("dynamic-priced model %q also sets static rates: %+v", model, p)
+		}
+	}
+	if !IsDynamicPricing("moonshotai/kimi-k3") || IsDynamicPricing("gpt-4o-mini") {
+		t.Error("IsDynamicPricing misclassifies")
 	}
 }
 

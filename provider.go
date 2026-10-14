@@ -33,7 +33,7 @@ func WithModerationOption(m ModerationProvider) ProviderOption {
 }
 
 // NewLLMProvider creates an LLMProvider from a provider name
-// ("openai", "anthropic", "gemini", "ollama", or "huggingface").
+// ("openai", "anthropic", "gemini", "ollama", "huggingface", or "openrouter").
 // For ollama, apiKey is the base URL (e.g. "http://ollama:11434/v1").
 // For huggingface, apiKey is the HF token; base URL is read from HF_BASE_URL
 // (defaults to DefaultHuggingFaceBaseURL).
@@ -77,6 +77,15 @@ func NewLLMProvider(providerName, apiKey, model string, opts ...ProviderOption) 
 		return p
 	case "huggingface":
 		p := NewHuggingFaceProvider(apiKey, model, hfBaseURL())
+		if cfg.moderation != nil {
+			p.WithModeration(cfg.moderation)
+		}
+		if cfg.meter != nil {
+			p.WithMeter(cfg.meter)
+		}
+		return p
+	case "openrouter":
+		p := NewOpenRouterProvider(apiKey, model)
 		if cfg.moderation != nil {
 			p.WithModeration(cfg.moderation)
 		}

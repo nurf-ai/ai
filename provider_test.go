@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewLLMProvider_AllNames(t *testing.T) {
-	for _, name := range []string{"anthropic", "openai", "ollama", "huggingface", "unknown-defaults-to-anthropic"} {
+	for _, name := range []string{"anthropic", "openai", "ollama", "huggingface", "openrouter", "unknown-defaults-to-anthropic"} {
 		p := NewLLMProvider(name, "fake-key", "fake-model")
 		if p == nil {
 			t.Errorf("NewLLMProvider(%q) returned nil", name)

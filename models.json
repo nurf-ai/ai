@@ -532,6 +532,10 @@
   "openrouter": {
     "black-forest-labs/flux.2-klein-4b": {
       "flat_per_image": 0.014
+    },
+    "moonshotai/kimi-k3": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
     }
   },
   "typesafe": {

@@ -20,7 +20,14 @@ func PricingTable() map[string]modelPricing {
 	return out
 }
 
+// PricingDynamic marks a models.json entry priced at request time: the
+// provider reports each call's cost (OpenRouter's usage.cost), so the entry
+// carries no rates. Set as "pricing": "dynamic".
+const PricingDynamic = "dynamic"
+
 type modelPricing struct {
+	// Pricing is "" for the static rates below, or PricingDynamic.
+	Pricing                    string             `json:"pricing,omitempty"`
 	InputPerMillion            float64            `json:"input_per_million"`
 	OutputPerMillion           float64            `json:"output_per_million"`
 	CacheCreationPerMillion    float64            `json:"cache_creation_per_million,omitempty"`
@@ -47,6 +54,12 @@ type modelPricing struct {
 	// STTPerMinute prices speech-to-text by minute of input audio: models
 	// billed by duration, and a token-billed one whose call reports no tokens.
 	STTPerMinute float64 `json:"stt_per_minute,omitempty"`
+}
+
+// IsDynamicPricing reports whether model is priced by the cost its provider
+// reports per call rather than by models.json rates.
+func IsDynamicPricing(model string) bool {
+	return pricingTable[model].Pricing == PricingDynamic
 }
 
 // IsTTSModel reports whether model is priced per character of speech input.
@@ -93,6 +106,9 @@ func init() {
 	modelMaxInputTokens = make(map[string]int64)
 	for company, models := range grouped {
 		for model, pricing := range models {
+			if pricing.Pricing != "" && pricing.Pricing != PricingDynamic {
+				panic("ai: models.json: " + model + ": unknown pricing " + pricing.Pricing)
+			}
 			pricingTable[model] = pricing
 			modelCompany[model] = company
 			if pricing.MaxInputTokens > 0 {
@@ -110,6 +126,11 @@ func EstimateCostFull(model string, in, out, cw, cr int) float64 {
 		if unknownModelHook != nil {
 			unknownModelHook(model)
 		}
+		return 0
+	}
+	if p.Pricing == PricingDynamic {
+		logger.Warn("dynamic-priced model reported no cost — cost recorded as 0",
+			zap.String("model", model), zap.Int("in", in), zap.Int("out", out))
 		return 0
 	}
 	if p.FlatPerImage > 0 {

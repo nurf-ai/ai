@@ -242,7 +242,7 @@ ai.SetLLMMeter(llm, func(ev ai.UsageEvent) {
 
 Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`, `ai.WithMeterMetadata(ctx, map[string]any{...})` — every provider merges stamped metadata into `UsageEvent.Metadata` (provider-set keys win).
 
-Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), `EstimateSTTCost` (per minute of audio transcribed), `EstimateAudioCost` (per second of generated audio), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time.
+Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), `EstimateSTTCost` (per minute of audio transcribed), `EstimateAudioCost` (per second of generated audio), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time. An entry with `"pricing": "dynamic"` carries no rates: its provider reports each call's cost (OpenRouter's `usage.cost`) and that is what gets metered.
 
 ### System One
 
@@ -267,7 +267,7 @@ result, err := judge.Judge(ctx, &ai.SystemOneRequest{
 
 | Factory | Providers | Features |
 |---------|-----------|----------|
-| `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface | Chat, streaming, structured output, tools |
+| `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface, openrouter | Chat, streaming, structured output, tools |
 | `NewSystemOneProvider(provider, apiKey)` | typesafe | Typed System One (noul, choice, score) |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewFalImageProvider(apiKey, model)` | fal | Image generation (FLUX schnell/dev) |
@@ -305,13 +305,14 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | Ollama | `qwen3.5:0.8b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | | |
 | Ollama | `gpt-oss:20b` | ✓ | ✓ | | ✓ | | | | | | | | | | | | | | | | | |
 | Ollama | `gemma4:e4b` | ✓ | ✓ | | | | | | | | | | | | | | | | | | | |
+| OpenRouter | `kimi-k3` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
+| OpenRouter | `flux.2-klein-4b` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | fal | `sonilo/v1.1` | | | | | | | | | | | ✓ | | | | | | | | | | |
 | fal | `sonilo/v1.1/music` | | | | | | | | | | | | ✓ | | | | | | | | | |
 | fal | `ltx-2.3/t2v/fast` | | | | | | | | | | | | | | | | | | | ✓ | | |
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | | ✓ | |
 | fal | `flux/schnell` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | | ✓ | |
-| OpenRouter | `flux.2-klein-4b` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | | — | — | |
 
 <!-- testmatrix:end -->
@@ -336,7 +337,7 @@ go test ./...
 
 ### Adding a model
 
-1. Add entry to [`models.json`](models.json) under the provider key — include `max_input_tokens`
+1. Add entry to [`models.json`](models.json) under the provider key — include `max_input_tokens`. For a provider that reports cost per call (OpenRouter), set `"pricing": "dynamic"` instead of rates
 2. `go test ./...` — `TestPricingCoverage` will fail if `max_input_tokens` is missing
 
 ### Updating models
@@ -386,6 +387,7 @@ go test -tags=integration -v -run TestAnthropic ./...
 go test -tags=integration -v -run TestOpenAI ./...
 go test -tags=integration -v -run TestGemini ./...
 go test -tags=integration -v -run TestHuggingFace ./...
+go test -tags=integration -v -run TestOpenRouter ./...
 go test -tags=integration -v -run TestOllama ./...
 ```
 

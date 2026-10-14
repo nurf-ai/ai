@@ -11,7 +11,10 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `openai.go` | OpenAI provider |
 | `gemini.go` | Google Gemini provider |
 | `ollama.go` | Ollama provider (local models) |
+| `openai_compat.go` | Shared core of OpenAI-compatible chat providers (Hugging Face, OpenRouter) |
 | `huggingface.go` | Hugging Face Inference API |
+| `openrouter.go` | OpenRouter chat (any routed model), metered from the cost the API reports |
+| `reported_cost.go` | Reads a provider-reported `usage.cost` off the response body for metering |
 | `gemini_image_provider.go` | Gemini image generation |
 | `gemini_video_provider.go` | Gemini video generation (Omni Flash, Interactions API) |
 | `openai_image_provider.go` | OpenAI image generation/editing |
@@ -39,7 +42,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `typesafe.go` | Typesafe System One provider (Jev model) |
 | `meter.go` | Usage metering hooks, prompt block attribution |
 | `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`, `EstimateSTTCost`, `EstimateRealtimeCost`) + context window lookup, loads `models.json` via `go:embed` |
-| `models.json` | Per-model pricing + context windows (single source of truth) |
+| `models.json` | Per-model pricing + context windows (single source of truth); `"pricing": "dynamic"` = priced by the cost the provider reports per call |
 | `model_limits.go` | `MaxInputTokensLLM` helper, token counting |
 | `provider.go` | Provider registry, `NewLLMProvider` factory |
 | `types.go` | `Message`, `Tool`, `Response`, shared types |
@@ -66,7 +69,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 
 ### Adding a model
 
-1. Add entry to `models.json` under the provider key — include `max_input_tokens`
+1. Add entry to `models.json` under the provider key — include `max_input_tokens`. For a provider that reports cost per call (OpenRouter), set `"pricing": "dynamic"` instead of rates
 2. `go test ./...` — `TestPricingCoverage` will fail if `max_input_tokens` is missing
 
 Provider model catalogs:
@@ -74,6 +77,7 @@ Provider model catalogs:
 - OpenAI: https://platform.openai.com/docs/models
 - Gemini: https://ai.google.dev/gemini-api/docs/models
 - Hugging Face: https://huggingface.co/models
+- OpenRouter: https://openrouter.ai/models
 - Ollama: https://ollama.com/library
 
 ### Testing
