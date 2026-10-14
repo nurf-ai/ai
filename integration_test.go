@@ -854,7 +854,6 @@ func TestHuggingFace_Integration(t *testing.T) {
 		t.Skip("HF_API_KEY not set")
 	}
 	t.Parallel()
-	ctx := context.Background()
 	models := []string{
 		"moonshotai/Kimi-K2-Instruct-0905",
 		"moonshotai/Kimi-K3",
@@ -864,103 +863,131 @@ func TestHuggingFace_Integration(t *testing.T) {
 		model := model
 		t.Run(model, func(t *testing.T) {
 			t.Parallel()
-
-			t.Run("Chat", func(t *testing.T) {
-				t.Parallel()
-				p := NewHuggingFaceProvider(key, model, "")
-				p.SetMeter(newCostTracker(t))
-				resp, err := p.Chat(ctx, []Message{{Role: RoleUser, Content: "say hi in one word"}}, nil)
-				if err != nil {
-					t.Fatalf("chat: %v", err)
-				}
-				if resp.Content == "" {
-					t.Fatal("empty response")
-				}
-				t.Logf("response: %s", resp.Content)
-			})
-
-			t.Run("StructuredOutput", func(t *testing.T) {
-				t.Parallel()
-				p := NewHuggingFaceProvider(key, model, "")
-				p.SetMeter(newCostTracker(t))
-				var out greeting
-				err := p.CreateStructuredOutput(ctx, "greet me briefly", "respond with a greeting", &out)
-				if err != nil {
-					t.Fatalf("structured output: %v", err)
-				}
-				if out.Message == "" {
-					t.Fatal("empty message")
-				}
-				t.Logf("greeting: %s", out.Message)
-			})
-
-			t.Run("StructuredOutputFromSchema", func(t *testing.T) {
-				t.Parallel()
-				p := NewHuggingFaceProvider(key, model, "")
-				p.SetMeter(newCostTracker(t))
-				result, err := p.CreateStructuredOutputFromSchema(ctx, "greet me briefly", "respond with a greeting", testSchema)
-				if err != nil {
-					t.Fatalf("structured output from schema: %v", err)
-				}
-				if result["message"] == nil || result["message"] == "" {
-					t.Fatal("empty message")
-				}
-				t.Logf("greeting: %v", result["message"])
-			})
-
-			t.Run("ChatWithTools", func(t *testing.T) {
-				t.Parallel()
-				p := NewHuggingFaceProvider(key, model, "")
-				p.SetMeter(newCostTracker(t))
-				tools := []Tool{{
-					Name:        "get_weather",
-					Description: "Get weather for a city",
-					Parameters: map[string]any{
-						"type": "object",
-						"properties": map[string]any{
-							"city": map[string]any{"type": "string"},
-						},
-						"required": []string{"city"},
-					},
-				}}
-				resp, err := p.Chat(ctx, []Message{{Role: RoleUser, Content: "what's the weather in tokyo?"}}, tools)
-				if err != nil {
-					t.Fatalf("chat with tools: %v", err)
-				}
-				if resp.Content == "" && len(resp.ToolCalls) == 0 {
-					t.Fatal("no content or tool calls")
-				}
-				if len(resp.ToolCalls) > 0 {
-					t.Logf("tool call: %s(%s)", resp.ToolCalls[0].Name, string(resp.ToolCalls[0].Arguments))
-				}
-			})
-
-			t.Run("Stream", func(t *testing.T) {
-				t.Parallel()
-				p := NewHuggingFaceProvider(key, model, "")
-				p.SetMeter(newCostTracker(t))
-				chunks, result := Stream(ctx, p, []Message{{Role: RoleUser, Content: "say hi in one word"}}, nil)
-				var got strings.Builder
-				for chunk, err := range chunks {
-					if err != nil {
-						t.Fatalf("stream chunk error: %v", err)
-					}
-					got.WriteString(chunk.Text)
-				}
-				if got.Len() == 0 {
-					t.Fatal("no streamed text")
-				}
-				t.Logf("streamed: %s", got.String())
-				resp, err := result.Response()
-				if err != nil {
-					t.Fatalf("stream response: %v", err)
-				}
-				if resp.Content != got.String() {
-					t.Errorf("response %q != streamed %q", resp.Content, got.String())
-				}
-			})
+			testOpenAICompatChat(t, func() *openAICompat { return &NewHuggingFaceProvider(key, model, "").openAICompat })
 		})
 	}
+}
+
+// --- OpenRouter ----------------------------------------------------------
+
+func TestOpenRouter_Integration(t *testing.T) {
+	key := os.Getenv("OPENROUTER_API_KEY")
+	if key == "" {
+		t.Skip("OPENROUTER_API_KEY not set")
+	}
+	t.Parallel()
+	models := []string{
+		"moonshotai/kimi-k3",
+	}
+
+	for _, model := range models {
+		model := model
+		t.Run(model, func(t *testing.T) {
+			t.Parallel()
+			testOpenAICompatChat(t, func() *openAICompat { return &NewOpenRouterProvider(key, model).openAICompat })
+		})
+	}
+}
+
+// testOpenAICompatChat runs the chat capability subtests against an
+// OpenAI-compatible provider (Hugging Face, OpenRouter).
+func testOpenAICompatChat(t *testing.T, newP func() *openAICompat) {
+	ctx := context.Background()
+
+	t.Run("Chat", func(t *testing.T) {
+		t.Parallel()
+		p := newP()
+		p.SetMeter(newCostTracker(t))
+		resp, err := p.Chat(ctx, []Message{{Role: RoleUser, Content: "say hi in one word"}}, nil)
+		if err != nil {
+			t.Fatalf("chat: %v", err)
+		}
+		if resp.Content == "" {
+			t.Fatal("empty response")
+		}
+		t.Logf("response: %s", resp.Content)
+	})
+
+	t.Run("StructuredOutput", func(t *testing.T) {
+		t.Parallel()
+		p := newP()
+		p.SetMeter(newCostTracker(t))
+		var out greeting
+		err := p.CreateStructuredOutput(ctx, "greet me briefly", "respond with a greeting", &out)
+		if err != nil {
+			t.Fatalf("structured output: %v", err)
+		}
+		if out.Message == "" {
+			t.Fatal("empty message")
+		}
+		t.Logf("greeting: %s", out.Message)
+	})
+
+	t.Run("StructuredOutputFromSchema", func(t *testing.T) {
+		t.Parallel()
+		p := newP()
+		p.SetMeter(newCostTracker(t))
+		result, err := p.CreateStructuredOutputFromSchema(ctx, "greet me briefly", "respond with a greeting", testSchema)
+		if err != nil {
+			t.Fatalf("structured output from schema: %v", err)
+		}
+		if result["message"] == nil || result["message"] == "" {
+			t.Fatal("empty message")
+		}
+		t.Logf("greeting: %v", result["message"])
+	})
+
+	t.Run("ChatWithTools", func(t *testing.T) {
+		t.Parallel()
+		p := newP()
+		p.SetMeter(newCostTracker(t))
+		tools := []Tool{{
+			Name:        "get_weather",
+			Description: "Get weather for a city",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"city": map[string]any{"type": "string"},
+				},
+				"required": []string{"city"},
+			},
+		}}
+		resp, err := p.Chat(ctx, []Message{{Role: RoleUser, Content: "what's the weather in tokyo?"}}, tools)
+		if err != nil {
+			t.Fatalf("chat with tools: %v", err)
+		}
+		if resp.Content == "" && len(resp.ToolCalls) == 0 {
+			t.Fatal("no content or tool calls")
+		}
+		if len(resp.ToolCalls) > 0 {
+			t.Logf("tool call: %s(%s)", resp.ToolCalls[0].Name, string(resp.ToolCalls[0].Arguments))
+		}
+	})
+
+	t.Run("Stream", func(t *testing.T) {
+		t.Parallel()
+		p := newP()
+		p.SetMeter(newCostTracker(t))
+		chunks, result := Stream(ctx, p, []Message{{Role: RoleUser, Content: "say hi in one word"}}, nil)
+		var got strings.Builder
+		for chunk, err := range chunks {
+			if err != nil {
+				t.Fatalf("stream chunk error: %v", err)
+			}
+			got.WriteString(chunk.Text)
+		}
+		if got.Len() == 0 {
+			t.Fatal("no streamed text")
+		}
+		t.Logf("streamed: %s", got.String())
+		resp, err := result.Response()
+		if err != nil {
+			t.Fatalf("stream response: %v", err)
+		}
+		if resp.Content != got.String() {
+			t.Errorf("response %q != streamed %q", resp.Content, got.String())
+		}
+	})
 }
 
 // --- fal Image -----------------------------------------------------------
@@ -973,7 +1000,7 @@ func TestFalImage_Integration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	t.Run("Generate", func(t *testing.T) {
+	t.Run("ImageGenerate", func(t *testing.T) {
 		t.Parallel()
 		img := NewFalImageProvider(key, "", nil...)
 		img.SetMeter(newCostTracker(t))
@@ -987,7 +1014,7 @@ func TestFalImage_Integration(t *testing.T) {
 		t.Logf("image b64 len: %d", len(b64))
 	})
 
-	t.Run("Generate_PixelArtIcon", func(t *testing.T) {
+	t.Run("ImageGenerate_PixelArtIcon", func(t *testing.T) {
 		t.Parallel()
 		img := NewFalImageProvider(key, "fal-ai/flux/schnell")
 		img.SetMeter(newCostTracker(t))
@@ -1001,7 +1028,7 @@ func TestFalImage_Integration(t *testing.T) {
 		t.Logf("pixel art icon b64 len: %d", len(b64))
 	})
 
-	t.Run("Generate_SmallIcon", func(t *testing.T) {
+	t.Run("ImageGenerate_SmallIcon", func(t *testing.T) {
 		t.Parallel()
 		img := NewFalImageProvider(key, "fal-ai/flux/schnell")
 		img.SetMeter(newCostTracker(t))
@@ -1026,7 +1053,7 @@ func TestOpenRouterImage_Integration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	t.Run("Generate", func(t *testing.T) {
+	t.Run("ImageGenerate", func(t *testing.T) {
 		t.Parallel()
 		img := NewOpenRouterImageProvider(key, "")
 		img.SetMeter(newCostTracker(t))
@@ -1040,7 +1067,7 @@ func TestOpenRouterImage_Integration(t *testing.T) {
 		t.Logf("image b64 len: %d", len(b64))
 	})
 
-	t.Run("Generate_PixelArt", func(t *testing.T) {
+	t.Run("ImageGenerate_PixelArt", func(t *testing.T) {
 		t.Parallel()
 		img := NewOpenRouterImageProvider(key, "black-forest-labs/flux.2-klein-4b")
 		img.SetMeter(newCostTracker(t))

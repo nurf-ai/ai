@@ -84,7 +84,7 @@ func (p *OllamaProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 		return err
 	}
 	logger.Log(traceLevel, "structured output", zap.String("provider", "ollama"), zap.String("model", p.model))
-	_, err := p.instructor.CreateChatCompletion(
+	resp, err := p.instructor.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
 			Model: p.model,
@@ -95,6 +95,10 @@ func (p *OllamaProvider) CreateStructuredOutput(ctx context.Context, userPrompt,
 		},
 		structuredOutput,
 	)
+	// instructor sums usage over its retries, and reports it on failure too
+	if resp.Usage.TotalTokens > 0 || resp.Usage.PromptTokens > 0 {
+		p.emitUsage(ctx, resp.Usage, sysPrompt, userPrompt)
+	}
 	if err != nil {
 		return fmt.Errorf("ollama structured output: %w", err)
 	}
