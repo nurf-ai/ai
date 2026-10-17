@@ -146,6 +146,8 @@ stt := ai.NewSTTProvider(provider, apiKey, model)
 text, err := stt.Transcribe(ctx, audioReader, "audio.mp3")
 ```
 
+`ai.WithSTTLanguage(ctx, "en-US")` hints the spoken language: a BCP-47 tag or bare code, sent as `language` (openai, ISO-639-1) or `language_code` (elevenlabs) in its primary subtag, `en`. Without it the provider detects the language, which can pick a wrong one for a short or unclear clip.
+
 `ai.SetSTTMeter(stt, hook)` reports each transcription from the usage OpenAI returns: tokens, priced per token, for `gpt-4o-transcribe` and `gpt-4o-mini-transcribe`; seconds of audio, priced per minute, for models billed by duration (`whisper-1`, `gpt-transcribe`). `Metadata["seconds"]` is the audio's length and `Metadata["seconds_from"]` its source: `duration` (reported by the API), `audio_tokens` (10 audio tokens a second) or `size` (guessed from the upload, also marked `estimated`).
 
 ### Text-to-Speech

@@ -51,6 +51,7 @@ func TestEmbedText_Metered(t *testing.T) {
 type sttCall struct {
 	path, auth, model, format, filename string
 	file                                []byte
+	language                            []string // every "language" field sent
 }
 
 // sttFake is a provider for model whose endpoint answers status and body,
@@ -64,6 +65,9 @@ func sttFake(t *testing.T, model string, status int, body string) (*OpenAISTTPro
 			t.Errorf("multipart form: %v", err)
 		}
 		c.model, c.format = r.FormValue("model"), r.FormValue("response_format")
+		if r.MultipartForm != nil {
+			c.language = r.MultipartForm.Value["language"]
+		}
 		if f, h, err := r.FormFile("file"); err == nil {
 			c.filename = h.Filename
 			c.file, _ = io.ReadAll(f)
@@ -218,5 +222,34 @@ func TestTranscribe_APIError(t *testing.T) {
 
 	if _, err := p.Transcribe(context.Background(), nil, "hello.webm"); err == nil {
 		t.Fatal("no audio, no error")
+	}
+}
+
+// A language hint on the ctx is sent as the language parameter, cut to its
+// ISO-639-1 code; without one (or with one the endpoint cannot take) the
+// field is left out and the endpoint detects the language.
+func TestTranscribe_LanguageHint(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ctx  context.Context
+		want []string
+	}{
+		{"region tag", WithSTTLanguage(context.Background(), "en-US"), []string{"en"}},
+		{"bare code", WithSTTLanguage(context.Background(), "fr"), []string{"fr"}},
+		{"underscore, mixed case", WithSTTLanguage(context.Background(), "PT_br"), []string{"pt"}},
+		{"unset", context.Background(), nil},
+		{"empty", WithSTTLanguage(context.Background(), ""), nil},
+		{"unparsable", WithSTTLanguage(context.Background(), "1234"), nil},
+		{"three letter code", WithSTTLanguage(context.Background(), "yue"), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p, calls := sttFake(t, "gpt-4o-transcribe", http.StatusOK, `{"text":"hello"}`)
+			if _, err := p.Transcribe(tc.ctx, strings.NewReader("audio"), "hello.webm"); err != nil {
+				t.Fatal(err)
+			}
+			if c := <-calls; strings.Join(c.language, ",") != strings.Join(tc.want, ",") {
+				t.Fatalf("language fields = %q, want %q", c.language, tc.want)
+			}
+		})
 	}
 }
