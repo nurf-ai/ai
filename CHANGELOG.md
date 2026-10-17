@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/nurf-ai/ai/compare/v0.18.0...v0.19.0) (2026-10-17)
+
+
+### Features
+
+* optional language hint for speech-to-text ([#45](https://github.com/nurf-ai/ai/issues/45)) ([309d105](https://github.com/nurf-ai/ai/commit/309d1059d026bff11c45cd67494073f0032c62ae))
+
 ## [0.18.0](https://github.com/nurf-ai/ai/compare/v0.17.6...v0.18.0) (2026-10-14)
 
 
