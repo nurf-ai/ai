@@ -47,7 +47,7 @@ func (p *ElevenLabsSTTProvider) Transcribe(ctx context.Context, audio io.Reader,
 	if audio == nil {
 		return "", errors.New("elevenlabs stt: no audio")
 	}
-	body, contentType, size, err := p.form(audio, filename)
+	body, contentType, size, err := p.form(audio, filename, STTLanguageFromCtx(ctx))
 	if err != nil {
 		return "", fmt.Errorf("elevenlabs stt: %w", err)
 	}
@@ -64,7 +64,7 @@ func (p *ElevenLabsSTTProvider) Transcribe(ctx context.Context, audio io.Reader,
 	return res.Text, nil
 }
 
-func (p *ElevenLabsSTTProvider) form(audio io.Reader, filename string) (*bytes.Buffer, string, int64, error) {
+func (p *ElevenLabsSTTProvider) form(audio io.Reader, filename, language string) (*bytes.Buffer, string, int64, error) {
 	if filename == "" {
 		if f, ok := audio.(interface{ Name() string }); ok {
 			filename = f.Name()
@@ -81,6 +81,11 @@ func (p *ElevenLabsSTTProvider) form(audio io.Reader, filename string) (*bytes.B
 	w := multipart.NewWriter(body)
 	if err := w.WriteField("model_id", p.model); err != nil {
 		return nil, "", 0, err
+	}
+	if language != "" {
+		if err := w.WriteField("language_code", language); err != nil {
+			return nil, "", 0, err
+		}
 	}
 	part, err := w.CreatePart(textproto.MIMEHeader{
 		"Content-Disposition": {fmt.Sprintf(`form-data; name="file"; filename="%s"`, formQuoteEscaper.Replace(filepath.Base(filename)))},

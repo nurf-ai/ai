@@ -120,6 +120,40 @@ func TestElevenLabsSTT(t *testing.T) {
 	}
 }
 
+// A language hint on the ctx is sent as language_code (3 letter codes are
+// fine here); without one the field is left out and Scribe detects it.
+func TestElevenLabsSTTLanguageHint(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ctx  context.Context
+		want []string
+	}{
+		{"region tag", WithSTTLanguage(context.Background(), "en-US"), []string{"en"}},
+		{"three letter code", WithSTTLanguage(context.Background(), "yue"), []string{"yue"}},
+		{"unset", context.Background(), nil},
+		{"empty", WithSTTLanguage(context.Background(), ""), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []string
+			srv := elevenLabsServer(t, func(w http.ResponseWriter, r *http.Request) {
+				if err := r.ParseMultipartForm(1 << 20); err != nil {
+					t.Error(err)
+				}
+				got = r.MultipartForm.Value["language_code"]
+				_, _ = w.Write([]byte(`{"language_code":"eng","text":"hi","audio_duration_secs":1}`))
+			})
+			p := NewElevenLabsSTTProvider("k", "")
+			p.client.baseURL = srv.URL
+			if _, err := p.Transcribe(tc.ctx, strings.NewReader("audio"), "clip.mp3"); err != nil {
+				t.Fatal(err)
+			}
+			if strings.Join(got, ",") != strings.Join(tc.want, ",") {
+				t.Errorf("language_code fields = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestElevenLabsAudio(t *testing.T) {
 	var gotBody map[string]any
 	audio := make([]byte, 32000) // 2 s at 128 kbps

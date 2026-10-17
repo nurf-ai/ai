@@ -112,7 +112,7 @@ func (u sttUsage) inputSplit() (audio, text int) {
 
 // transcribe uploads audio and decodes the answer; size is the bytes sent.
 func (p *OpenAISTTProvider) transcribe(ctx context.Context, audio io.Reader, filename string) (*sttResponse, int64, error) {
-	body, contentType, size, err := sttForm(audio, filename, p.model)
+	body, contentType, size, err := sttForm(audio, filename, p.model, openAISTTLanguage(ctx))
 	if err != nil {
 		return nil, size, err
 	}
@@ -140,13 +140,23 @@ func (p *OpenAISTTProvider) transcribe(ctx context.Context, audio io.Reader, fil
 	return &res, size, nil
 }
 
+// openAISTTLanguage is the language hint on ctx in the form the endpoint
+// takes: an ISO-639-1 code, so a 3 letter one is left out.
+func openAISTTLanguage(ctx context.Context) string {
+	if l := STTLanguageFromCtx(ctx); len(l) == 2 {
+		return l
+	}
+	return ""
+}
+
 var formQuoteEscaper = strings.NewReplacer(`\`, `\\`, `"`, `\"`)
 
 // sttForm builds the multipart body the endpoint takes, as go-openai did: the
 // audio as "file" under its name (the API reads the format from the
 // extension), the model, and for whisper-1 response_format=verbose_json,
-// which adds the audio's duration. The other models answer json only.
-func sttForm(audio io.Reader, filename, model string) (body *bytes.Buffer, contentType string, size int64, err error) {
+// which adds the audio's duration. The other models answer json only. A
+// non-empty language is sent as the language parameter.
+func sttForm(audio io.Reader, filename, model, language string) (body *bytes.Buffer, contentType string, size int64, err error) {
 	if filename == "" {
 		if f, ok := audio.(interface{ Name() string }); ok {
 			filename = f.Name()
@@ -170,6 +180,11 @@ func sttForm(audio io.Reader, filename, model string) (body *bytes.Buffer, conte
 	}
 	if err = w.WriteField("model", model); err != nil {
 		return nil, "", size, err
+	}
+	if language != "" {
+		if err = w.WriteField("language", language); err != nil {
+			return nil, "", size, err
+		}
 	}
 	if model == openai.Whisper1 {
 		if err = w.WriteField("response_format", string(openai.AudioResponseFormatVerboseJSON)); err != nil {
