@@ -112,6 +112,10 @@ go test -tags=integration -json -run TestAnthropic ./... | go run ./cmd/testmatr
 
 See `.env.test.tpl` for the full list of env vars.
 
+### Branches
+
+`<user>/<type>/<id>-<slug>`: `<user>` is `git config user.name`; `<type>` one of `feat`, `fix`, `hotfix`, `release`, `chore`, `docs`, `refactor`, `test`; `<id>-` an optional ticket id; all lowercase kebab-case, no underscores. `main` has no prefix.
+
 ### Commits & releases
 
 Use [conventional commits](https://www.conventionalcommits.org/). Release Please creates a release PR on push to main — merging it tags and publishes. The prefix determines the version bump:
@@ -121,3 +125,5 @@ Use [conventional commits](https://www.conventionalcommits.org/). Release Please
 | `feat:` | minor | New capability in the library |
 | `fix:` | patch | Bug fix in library code |
 | `docs:`, `chore:`, `test:`, `ci:` | none | No release — README, tooling, tests, CI |
+
+A breaking change takes `!` (`feat!: …`) or a `BREAKING CHANGE:` footer.
