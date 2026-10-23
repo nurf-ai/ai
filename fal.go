@@ -190,10 +190,7 @@ func (c *FalClient) Wait(ctx context.Context, req *FalRequest) (*FalStatus, erro
 			return nil, ctx.Err()
 		case <-time.After(interval):
 		}
-		interval = interval * 3 / 2
-		if interval > falMaxPollInterval {
-			interval = falMaxPollInterval
-		}
+		interval = min(interval*3/2, falMaxPollInterval)
 	}
 }
 

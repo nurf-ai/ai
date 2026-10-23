@@ -398,10 +398,7 @@ func printWithCost(label string, c *providerCost) {
 		fmt.Fprintln(os.Stderr, label)
 		return
 	}
-	pad := costCol - utf8.RuneCountInString(label)
-	if pad < 2 {
-		pad = 2
-	}
+	pad := max(costCol-utf8.RuneCountInString(label), 2)
 	fmt.Fprintf(os.Stderr, "%s%*s%s\n", label, pad, "", cost)
 }
 

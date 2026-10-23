@@ -132,7 +132,7 @@ func TestFalClient_WaitCancelsOnCtx(t *testing.T) {
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
-	var cancelled int32
+	var cancelled atomic.Int32
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost:
@@ -141,7 +141,7 @@ func TestFalClient_WaitCancelsOnCtx(t *testing.T) {
 				"response_url": srv.URL + "/m/requests/r", "cancel_url": srv.URL + "/m/requests/r/cancel",
 			})
 		case strings.HasSuffix(r.URL.Path, "/cancel"):
-			atomic.StoreInt32(&cancelled, 1)
+			cancelled.Store(1)
 		default:
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "IN_PROGRESS"})
 		}
@@ -153,7 +153,7 @@ func TestFalClient_WaitCancelsOnCtx(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected deadline error, got %v", err)
 	}
-	if atomic.LoadInt32(&cancelled) != 1 {
+	if cancelled.Load() != 1 {
 		t.Fatal("expected cancel to be called")
 	}
 }

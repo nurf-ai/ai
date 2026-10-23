@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"time"
 
 	"go.uber.org/zap"
@@ -281,13 +282,13 @@ func (p *GeminiVideoProvider) buildRequest(model string, req VideoRequest) gemin
 }
 
 func findVideoContent(steps []geminiStep) *geminiContent {
-	for i := len(steps) - 1; i >= 0; i-- {
-		if steps[i].Type != "model_output" {
+	for _, step := range slices.Backward(steps) {
+		if step.Type != "model_output" {
 			continue
 		}
-		for j := range steps[i].Content {
-			if steps[i].Content[j].Type == "video" {
-				return &steps[i].Content[j]
+		for j := range step.Content {
+			if step.Content[j].Type == "video" {
+				return &step.Content[j]
 			}
 		}
 	}

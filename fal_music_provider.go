@@ -98,7 +98,7 @@ var lyricsSectionTag = regexp.MustCompile(`^\[\[[^\]]*\]\]$`)
 // "[:] " line prefixes) into plain stanzas separated by blank lines.
 func cleanLyrics(s string) string {
 	var out []string
-	for _, line := range strings.Split(s, "\n") {
+	for line := range strings.SplitSeq(s, "\n") {
 		line = strings.TrimSpace(line)
 		if lyricsSectionTag.MatchString(line) {
 			if len(out) > 0 && out[len(out)-1] != "" {

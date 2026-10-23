@@ -60,33 +60,27 @@ func ClassifyError(err error) (ErrorKind, string) {
 		return ErrUnknown, ""
 	}
 
-	var modErr *ModerationError
-	if errors.As(err, &modErr) {
+	if _, ok := errors.AsType[*ModerationError](err); ok {
 		return ErrModeration, "message flagged by content filter"
 	}
 
-	var inErr *InputError
-	if errors.As(err, &inErr) {
+	if inErr, ok := errors.AsType[*InputError](err); ok {
 		return ErrInvalidInput, inErr.Error()
 	}
 
-	var qErr *QuotaError
-	if errors.As(err, &qErr) {
+	if qErr, ok := errors.AsType[*QuotaError](err); ok {
 		return ErrQuota, qErr.Msg
 	}
 
-	var aErr *anthropic.Error
-	if errors.As(err, &aErr) {
+	if aErr, ok := errors.AsType[*anthropic.Error](err); ok {
 		return classifyHTTP(aErr.StatusCode, aErr.Error())
 	}
 
-	var oErr *openai.APIError
-	if errors.As(err, &oErr) {
+	if oErr, ok := errors.AsType[*openai.APIError](err); ok {
 		return classifyHTTP(oErr.HTTPStatusCode, oErr.Error())
 	}
 
-	var fErr *FalError
-	if errors.As(err, &fErr) {
+	if fErr, ok := errors.AsType[*FalError](err); ok {
 		// fal answers a request its input schema rejects with 400/422 and the
 		// field-level reasons; that is the caller's to fix, not an outage.
 		if (fErr.Status == 400 || fErr.Status == 422) && !outOfCredits(strings.ToLower(fErr.Message)) {
@@ -95,8 +89,7 @@ func ClassifyError(err error) (ErrorKind, string) {
 		return classifyHTTP(fErr.Status, fErr.Message)
 	}
 
-	var tErr *TypesafeError
-	if errors.As(err, &tErr) {
+	if tErr, ok := errors.AsType[*TypesafeError](err); ok {
 		return classifyHTTP(tErr.Status, tErr.Message)
 	}
 

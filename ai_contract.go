@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"slices"
 )
 
 // LLMProvider is the consumer-facing contract for any LLM backend.
@@ -74,8 +75,8 @@ type Middleware func(next ModelFunc) ModelFunc
 // Chain composes middleware so the first in the list is outermost.
 func Chain(mws ...Middleware) Middleware {
 	return func(final ModelFunc) ModelFunc {
-		for i := len(mws) - 1; i >= 0; i-- {
-			final = mws[i](final)
+		for _, mw := range slices.Backward(mws) {
+			final = mw(final)
 		}
 		return final
 	}
