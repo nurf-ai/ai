@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/nurf-ai/ai/compare/v0.19.0...v0.19.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* price huggingface and openrouter fallback models ([a487999](https://github.com/nurf-ai/ai/commit/a4879995222c9c1f14f911eaa93ac3608dfe3b70))
+
 ## [0.19.0](https://github.com/nurf-ai/ai/compare/v0.18.0...v0.19.0) (2026-10-17)
 
 
