@@ -559,6 +559,46 @@
       "input_per_million": 0.1,
       "output_per_million": 0.2,
       "max_input_tokens": 131072
+    },
+    "Qwen/Qwen3.8-2.4T-A95B": {
+      "input_per_million": 2.0,
+      "output_per_million": 6.0,
+      "max_input_tokens": 262144
+    },
+    "zai-org/GLM-5.3": {
+      "input_per_million": 1.4,
+      "output_per_million": 4.4,
+      "max_input_tokens": 1048576
+    },
+    "deepseek-ai/DeepSeek-V4-Pro": {
+      "input_per_million": 1.6,
+      "output_per_million": 3.2,
+      "max_input_tokens": 1048576
+    },
+    "MiniMaxAI/MiniMax-M3": {
+      "input_per_million": 0.3,
+      "output_per_million": 1.2,
+      "max_input_tokens": 524288
+    },
+    "MiniMaxAI/MiniMax-M3.1-Flash": {
+      "input_per_million": 0.15,
+      "output_per_million": 0.6,
+      "max_input_tokens": 1000000
+    },
+    "zai-org/GLM-5.3-Flash": {
+      "input_per_million": 0.15,
+      "output_per_million": 0.5,
+      "max_input_tokens": 1048576
+    },
+    "deepseek-ai/DeepSeek-V4.1-Flash": {
+      "input_per_million": 0.3,
+      "output_per_million": 1.2,
+      "max_input_tokens": 1048576
+    },
+    "Qwen/Qwen3.8-27B": {
+      "input_per_million": 0.99,
+      "output_per_million": 3.19,
+      "max_input_tokens": 262144
     }
   },
   "openrouter": {
@@ -566,6 +606,62 @@
       "flat_per_image": 0.014
     },
     "moonshotai/kimi-k3": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "moonshotai/kimi-k3.1-pro": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "qwen/qwen3.8-max-0902": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1000000
+    },
+    "qwen/qwen3.8-max-prime": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1000000
+    },
+    "qwen/qwen3.7-plus": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1000000
+    },
+    "z-ai/glm-5.3-prime": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1000000
+    },
+    "z-ai/glm-5.3": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "deepseek/deepseek-v4-pro-0813": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "deepseek/deepseek-v4-pro": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "minimax/minimax-m3": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "minimax/minimax-m3.1-flash": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "deepseek/deepseek-v4.1-flash": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "qwen/qwen3.8-flash": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1000000
+    },
+    "z-ai/glm-5.3-flash": {
+      "pricing": "dynamic",
+      "max_input_tokens": 1048576
+    },
+    "z-ai/glm-5.3-flashx": {
       "pricing": "dynamic",
       "max_input_tokens": 1048576
     }
