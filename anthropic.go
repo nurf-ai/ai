@@ -323,6 +323,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 				},
 			})
 		}
+		cacheAnthropicMessage(m, apiMessages)
 	}
 
 	var apiTools []anthropic.ToolUnionParam
@@ -728,6 +729,7 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 				},
 			})
 		}
+		cacheAnthropicMessage(m, apiMessages)
 	}
 
 	var apiTools []anthropic.ToolUnionParam
@@ -947,4 +949,28 @@ func toolInput(args json.RawMessage) json.RawMessage {
 		return json.RawMessage(`{}`)
 	}
 	return args
+}
+
+// cacheAnthropicMessage preserves explicit breakpoints on conversation blocks,
+// including image inputs and tool results, in both chat transports.
+func cacheAnthropicMessage(m Message, messages []anthropic.MessageParam) {
+	if (m.Role != RoleUser && m.Role != RoleAssistant && m.Role != RoleTool) || m.CacheControl == nil || m.CacheControl.Type != "ephemeral" || len(messages) == 0 {
+		return
+	}
+	blocks := messages[len(messages)-1].Content
+	if len(blocks) == 0 {
+		return
+	}
+	b := &blocks[len(blocks)-1]
+	c := anthropic.NewCacheControlEphemeralParam()
+	switch {
+	case b.OfText != nil:
+		b.OfText.CacheControl = c
+	case b.OfImage != nil:
+		b.OfImage.CacheControl = c
+	case b.OfToolUse != nil:
+		b.OfToolUse.CacheControl = c
+	case b.OfToolResult != nil:
+		b.OfToolResult.CacheControl = c
+	}
 }

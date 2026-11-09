@@ -45,7 +45,7 @@ func WithTypesafeBase(base string) TypesafeOption {
 	}
 }
 
-// WithTypesafeModel overrides the model (default "jev-latest").
+// WithTypesafeModel overrides the model (default "jev-1.14.0").
 func WithTypesafeModel(model string) TypesafeOption {
 	return func(p *TypesafeSystemOneProvider) {
 		if model != "" {
@@ -57,7 +57,7 @@ func WithTypesafeModel(model string) TypesafeOption {
 func NewTypesafeSystemOneProvider(apiKey string, opts ...TypesafeOption) *TypesafeSystemOneProvider {
 	p := &TypesafeSystemOneProvider{
 		apiKey: apiKey,
-		model:  "jev-latest",
+		model:  "jev-1.14.0",
 		base:   defaultTypesafeBase,
 		http:   &http.Client{},
 	}
@@ -116,17 +116,21 @@ func (p *TypesafeSystemOneProvider) Judge(ctx context.Context, req *SystemOneReq
 		return nil, fmt.Errorf("typesafe: decode response: %w", err)
 	}
 
+	if result.Model == "" {
+		result.Model = p.model
+	}
 	if p.meter != nil {
 		ev := UsageEvent{
-			DebugSpanID:  DebugSpanIDFromCtx(ctx),
-			CallerID:     MeterCallerIDFromCtx(ctx),
-			Provider:     "typesafe",
-			Model:        result.Model,
-			Operation:    MeterOperationFromCtx(ctx),
-			InputTokens:  result.Usage.InputTokens,
-			OutputTokens: result.Usage.OutputTokens,
-			TotalTokens:  result.Usage.InputTokens + result.Usage.OutputTokens,
-			Metadata:     mergeMeterMetadata(ctx, nil),
+			DebugSpanID:      DebugSpanIDFromCtx(ctx),
+			CallerID:         MeterCallerIDFromCtx(ctx),
+			Provider:         "typesafe",
+			Model:            result.Model,
+			Operation:        MeterOperationFromCtx(ctx),
+			InputTokens:      result.Usage.InputTokens,
+			OutputTokens:     result.Usage.OutputTokens,
+			TotalTokens:      result.Usage.InputTokens + result.Usage.OutputTokens,
+			EstimatedCostUSD: EstimateCostFull(result.Model, result.Usage.InputTokens, result.Usage.OutputTokens, 0, 0),
+			Metadata:         mergeMeterMetadata(ctx, nil),
 		}
 		attachBlocks(ctx, &ev)
 		p.meter(ev)

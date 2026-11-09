@@ -265,6 +265,12 @@ result, err := judge.Judge(ctx, &ai.SystemOneRequest{
 // result.Answers["is_urgent"].Noul  → 0.97  (boolean probability)
 // result.Answers["anger"].Score     → 2.99  (ordinal 0–3)
 ```
+### Conversation caching and decision pricing
+
+Anthropic chat and streaming honor `Message.CacheControl` on the last content block of user, assistant and tool-result messages, as well as system messages. Callers can retain a previous conversation boundary while advancing a second one across long tool batches. Keep the total at four markers, including system markers added by `WithCacheSysPrompt`. Cache writes have a premium; measure full request sequences before assuming savings.
+
+The Typesafe default is pinned to `jev-1.14.0`; `WithTypesafeModel` overrides it. Jev 1.13/1.14 and the `jev-latest` alias are priced at $0.042 per million input tokens with free output in the bundled table ([provider models](https://docs.typesafe.ai/models)). Meter events use the response model, or the requested model when the response omits it.
+
 ## Providers
 
 | Factory | Providers | Features |

@@ -668,9 +668,19 @@
   },
   "typesafe": {
     "jev-latest": {
-      "input_per_million": 0,
+      "input_per_million": 0.042,
       "output_per_million": 0,
-      "max_input_tokens": 128000
+      "max_input_tokens": 64000
+    },
+    "jev-1.13.0": {
+      "input_per_million": 0.042,
+      "output_per_million": 0,
+      "max_input_tokens": 64000
+    },
+    "jev-1.14.0": {
+      "input_per_million": 0.042,
+      "output_per_million": 0,
+      "max_input_tokens": 64000
     }
   }
 }

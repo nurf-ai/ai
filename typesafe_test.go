@@ -26,8 +26,8 @@ func TestTypesafeJudge(t *testing.T) {
 		if err := json.Unmarshal(body, &req); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		if req.Model != "jev-latest" {
-			t.Fatalf("want model jev-latest, got %s", req.Model)
+		if req.Model != "jev-1.14.0" {
+			t.Fatalf("want model jev-1.14.0, got %s", req.Model)
 		}
 		if _, ok := req.Questions["is_urgent"]; !ok {
 			t.Fatal("missing question is_urgent")
@@ -41,7 +41,7 @@ func TestTypesafeJudge(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(SystemOneResult{
-			Model: "jev-latest",
+			Model: "jev-1.14.0",
 			Answers: map[string]SystemOneAnswer{
 				"is_urgent": {Type: QuestionNoul, Noul: 0.92},
 				"category": {
@@ -80,8 +80,8 @@ func TestTypesafeJudge(t *testing.T) {
 		t.Fatalf("Judge: %v", err)
 	}
 
-	if result.Model != "jev-latest" {
-		t.Errorf("model: want jev-latest, got %s", result.Model)
+	if result.Model != "jev-1.14.0" {
+		t.Errorf("model: want jev-1.14.0, got %s", result.Model)
 	}
 
 	// noul
@@ -105,7 +105,7 @@ func TestTypesafeJudge(t *testing.T) {
 func TestTypesafeJudgeMeter(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(SystemOneResult{
-			Model:   "jev-latest",
+			Model:   "jev-1.14.0",
 			Answers: map[string]SystemOneAnswer{"q": {Type: QuestionNoul, Noul: 0.5}},
 			Usage:   SystemOneUsage{InputTokens: 42, OutputTokens: 7},
 		})
@@ -128,6 +128,12 @@ func TestTypesafeJudgeMeter(t *testing.T) {
 	}
 	if got.Provider != "typesafe" {
 		t.Errorf("provider: want typesafe, got %s", got.Provider)
+	}
+	if got.EstimatedCostUSD != float64(42)*0.042/1_000_000 {
+		t.Errorf("cost = %.12f, want input-only price %.12f", got.EstimatedCostUSD, float64(42)*0.042/1_000_000)
+	}
+	if got.Model != "jev-1.14.0" {
+		t.Errorf("model = %q", got.Model)
 	}
 	if got.TotalTokens != 49 {
 		t.Errorf("total_tokens: want 49, got %d", got.TotalTokens)
