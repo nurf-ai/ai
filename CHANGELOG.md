@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.2](https://github.com/nurf-ai/ai/compare/v0.19.1...v0.19.2) (2026-11-09)
+
+
+### Bug Fixes
+
+* **anthropic:** stabilize tool schemas for prompt caching ([1a1f257](https://github.com/nurf-ai/ai/commit/1a1f257355d6865aa1ab93243e20923c3468aabc))
+
 ## [0.19.1](https://github.com/nurf-ai/ai/compare/v0.19.0...v0.19.1) (2026-11-08)
 
 
