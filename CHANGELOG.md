@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.3](https://github.com/nurf-ai/ai/compare/v0.19.2...v0.19.3) (2026-11-09)
+
+
+### Bug Fixes
+
+* meter decision costs and preserve conversation cache markers ([908a5cf](https://github.com/nurf-ai/ai/commit/908a5cfeac5e5cb7368bb65da06b98aa049a78f4))
+
 ## [0.19.2](https://github.com/nurf-ai/ai/compare/v0.19.1...v0.19.2) (2026-11-09)
 
 
