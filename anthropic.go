@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -183,7 +185,9 @@ func (p *AnthropicProvider) CreateStructuredOutputFromParts(ctx context.Context,
 	json.Unmarshal(propBytes, &propsParsed) //nolint:errcheck
 
 	orderedProps := jsonschema.NewProperties()
-	for k, v := range propsParsed {
+	// Stable property order preserves the cached tools + system prefix.
+	for _, k := range slices.Sorted(maps.Keys(propsParsed)) {
+		v := propsParsed[k]
 		orderedProps.Set(k, &v)
 	}
 
@@ -347,7 +351,9 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 		json.Unmarshal(propBytes, &propsParsed) //nolint:errcheck
 
 		orderedProps := jsonschema.NewProperties()
-		for k, v := range propsParsed {
+		// Stable property order preserves the cached tools + system prefix.
+		for _, k := range slices.Sorted(maps.Keys(propsParsed)) {
+			v := propsParsed[k]
 			orderedProps.Set(k, &v)
 		}
 
@@ -748,7 +754,9 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 		var propsParsed map[string]jsonschema.Schema
 		json.Unmarshal(propBytes, &propsParsed) //nolint:errcheck
 		orderedProps := jsonschema.NewProperties()
-		for k, v := range propsParsed {
+		// Stable property order preserves the cached tools + system prefix.
+		for _, k := range slices.Sorted(maps.Keys(propsParsed)) {
+			v := propsParsed[k]
 			orderedProps.Set(k, &v)
 		}
 		apiTools = append(apiTools, anthropic.ToolUnionParam{
