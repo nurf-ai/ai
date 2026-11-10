@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.4](https://github.com/nurf-ai/ai/compare/v0.19.3...v0.19.4) (2026-11-10)
+
+
+### Bug Fixes
+
+* **pricing:** price cached prompt tokens once for OpenAI and Gemini ([b194af7](https://github.com/nurf-ai/ai/commit/b194af70363c83822e0aa871de1215b2d965cd9e))
+
 ## [0.19.3](https://github.com/nurf-ai/ai/compare/v0.19.2...v0.19.3) (2026-11-09)
 
 
