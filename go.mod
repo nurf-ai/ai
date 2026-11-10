@@ -1,6 +1,6 @@
 module github.com/nurf-ai/ai
 
-go 1.26.6
+go 1.27.4
 
 require (
 	github.com/567-labs/instructor-go v0.0.0-20251010171220-db2cc6c8bc4b
