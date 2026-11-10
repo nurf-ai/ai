@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.5](https://github.com/nurf-ai/ai/compare/v0.19.4...v0.19.5) (2026-11-10)
+
+
+### Bug Fixes
+
+* **build:** require go 1.27.4 ([704da12](https://github.com/nurf-ai/ai/commit/704da12d8e9fdaf951be6b6c21128a3524bda995))
+
 ## [0.19.4](https://github.com/nurf-ai/ai/compare/v0.19.3...v0.19.4) (2026-11-10)
 
 
