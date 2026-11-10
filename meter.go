@@ -24,13 +24,16 @@ type UsageEvent struct {
 	TotalTokens      int       `json:"total_tokens"`
 	EstimatedCostUSD float64   `json:"estimated_cost_usd"`
 	// CacheCreationInputTokens counts tokens written to the provider's
-	// prompt cache on this call (Anthropic only, populated when cache
-	// writes occur; priced at ~1.25x base). Zero on cache hit or when
-	// caching isn't active.
+	// prompt cache on this call (Anthropic, and OpenAI models that report
+	// cache writes; priced at ~1.25x base where models.json has a
+	// cache-write rate). Zero on cache hit or when caching isn't active.
+	// Anthropic reports it on top of InputTokens; OpenAI counts it inside.
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
 	// CacheReadInputTokens counts tokens served from the provider's
-	// prompt cache (Anthropic only; priced at ~0.1x base). Nonzero means
-	// WithCacheSysPrompt is actively paying off.
+	// prompt cache (priced at the model's cache-read rate). Nonzero means
+	// caching is paying off. Anthropic reports it on top of InputTokens;
+	// OpenAI and Gemini count it inside InputTokens, which stays the
+	// prompt total they report.
 	CacheReadInputTokens int `json:"cache_read_input_tokens,omitempty"`
 	// SystemPrompt/UserPrompt are captured for dev debug display only — empty
 	// in production (see capturePromptForDebug).

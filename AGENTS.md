@@ -14,7 +14,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `openai_compat.go` | Shared core of OpenAI-compatible chat providers (Hugging Face, OpenRouter) |
 | `huggingface.go` | Hugging Face Inference API |
 | `openrouter.go` | OpenRouter chat (any routed model), metered from the cost the API reports |
-| `reported_cost.go` | Reads a provider-reported `usage.cost` off the response body for metering |
+| `reported_cost.go` | Reads usage fields the OpenAI client drops off the response body for metering: a provider-reported `usage.cost`, OpenAI's `cache_write_tokens` |
 | `gemini_image_provider.go` | Gemini image generation |
 | `gemini_video_provider.go` | Gemini video generation (Omni Flash, Interactions API) |
 | `openai_image_provider.go` | OpenAI image generation/editing |

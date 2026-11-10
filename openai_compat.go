@@ -83,7 +83,7 @@ func (p *openAICompat) emitUsage(ctx context.Context, usage openai.Usage, sysPro
 }
 
 func (p *openAICompat) CreateStructuredOutput(ctx context.Context, userPrompt, sysPrompt string, structuredOutput any) error {
-	ctx = withReportedCost(ctx)
+	ctx = withReportedUsage(ctx)
 	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (p *openAICompat) CreateStructuredOutputFromSchema(ctx context.Context, use
 // CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
 // multimodal user turn (text + base64 images).
 func (p *openAICompat) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
-	ctx = withReportedCost(ctx)
+	ctx = withReportedUsage(ctx)
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
@@ -205,7 +205,7 @@ func (p *openAICompat) CreateStructuredOutputFromParts(ctx context.Context, part
 }
 
 func (p *openAICompat) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
-	ctx = withReportedCost(ctx)
+	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -354,7 +354,7 @@ func (p *openAICompat) Chat(ctx context.Context, messages []Message, tools []Too
 }
 
 func (p *openAICompat) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
-	ctx = withReportedCost(ctx)
+	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {

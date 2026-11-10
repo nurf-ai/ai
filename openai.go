@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -40,7 +41,7 @@ func (p *OpenAIProvider) SetMeter(hook MeterHook)            { p.meter = hook }
 func (p *OpenAIProvider) SetModeration(m ModerationProvider) { p.moderation = m }
 
 func NewOpenAIProvider(apiKey, model string) *OpenAIProvider {
-	return newOpenAIProvider(openai.NewClient(apiKey), model)
+	return newOpenAIProvider(openai.DefaultConfig(apiKey), model)
 }
 
 // NewOpenAIProviderWithBaseURL targets an OpenAI-compatible endpoint (proxy,
@@ -48,10 +49,13 @@ func NewOpenAIProvider(apiKey, model string) *OpenAIProvider {
 func NewOpenAIProviderWithBaseURL(apiKey, model, baseURL string) *OpenAIProvider {
 	cfg := openai.DefaultConfig(apiKey)
 	cfg.BaseURL = baseURL
-	return newOpenAIProvider(openai.NewClientWithConfig(cfg), model)
+	return newOpenAIProvider(cfg, model)
 }
 
-func newOpenAIProvider(raw *openai.Client, model string) *OpenAIProvider {
+func newOpenAIProvider(cfg openai.ClientConfig, model string) *OpenAIProvider {
+	// reads the cache writes the client's Usage type drops (reported_cost.go)
+	cfg.HTTPClient = &http.Client{Transport: reportedUsageTransport{}}
+	raw := openai.NewClientWithConfig(cfg)
 	client := instructor.FromOpenAI(
 		raw,
 		instructor.WithMode(instructor.ModeJSON),
@@ -98,26 +102,30 @@ func (p *OpenAIProvider) emitUsage(ctx context.Context, usage openai.Usage, sysP
 	}
 	in := usage.PromptTokens
 	out := usage.CompletionTokens
-	// OpenAI auto-caches prompts ≥1024 tokens; the cached portion is reported
-	// in PromptTokensDetails.CachedTokens (nil-safe — older API versions may
-	// omit the field). No separate cache_creation premium on OpenAI.
+	// OpenAI auto-caches prompts ≥1024 tokens. PromptTokens is the prompt
+	// total: the cached reads (PromptTokensDetails.CachedTokens, nil-safe:
+	// older API versions omit it) and, on models that bill cache writes, the
+	// tokens written to the cache (read off the body, reported_cost.go) are
+	// both part of it, so each share is priced once at its own rate.
 	cacheRead := 0
 	if usage.PromptTokensDetails != nil {
 		cacheRead = usage.PromptTokensDetails.CachedTokens
 	}
+	cacheWrite := reportedCacheWritesFromCtx(ctx)
 	ev := UsageEvent{
-		CallerID:             MeterCallerIDFromCtx(ctx),
-		Provider:             "openai",
-		Model:                p.model,
-		Operation:            MeterOperationFromCtx(ctx),
-		InputTokens:          in,
-		OutputTokens:         out,
-		TotalTokens:          in + out,
-		CacheReadInputTokens: cacheRead,
-		EstimatedCostUSD:     EstimateCostFull(p.model, in, out, 0, cacheRead),
-		SystemPrompt:         TruncatePromptForDebug(sysPrompt),
-		UserPrompt:           TruncatePromptForDebug(userPrompt),
-		DebugSpanID:          DebugSpanIDFromCtx(ctx),
+		CallerID:                 MeterCallerIDFromCtx(ctx),
+		Provider:                 "openai",
+		Model:                    p.model,
+		Operation:                MeterOperationFromCtx(ctx),
+		InputTokens:              in,
+		OutputTokens:             out,
+		TotalTokens:              in + out,
+		CacheCreationInputTokens: cacheWrite,
+		CacheReadInputTokens:     cacheRead,
+		EstimatedCostUSD:         estimateCostCacheInPrompt(p.model, in, out, cacheWrite, cacheRead),
+		SystemPrompt:             TruncatePromptForDebug(sysPrompt),
+		UserPrompt:               TruncatePromptForDebug(userPrompt),
+		DebugSpanID:              DebugSpanIDFromCtx(ctx),
 	}
 	attachBlocks(ctx, &ev)
 	ev.Metadata = mergeMeterMetadata(ctx, ev.Metadata)
@@ -125,6 +133,7 @@ func (p *OpenAIProvider) emitUsage(ctx context.Context, usage openai.Usage, sysP
 }
 
 func (p *OpenAIProvider) CreateStructuredOutput(ctx context.Context, userPrompt, sysPrompt string, structuredOutput any) error {
+	ctx = withReportedUsage(ctx)
 	if err := checkModeration(ctx, p.moderation, userPrompt); err != nil {
 		return err
 	}
@@ -189,6 +198,7 @@ func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 // (default 4096) and forces the structured_output tool so the model cannot
 // answer in prose.
 func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	ctx = withReportedUsage(ctx)
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
@@ -293,6 +303,7 @@ func openaiUserMessageFromParts(parts []Part) openai.ChatCompletionMessage {
 }
 
 func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -500,6 +511,7 @@ func (p *OpenAIProvider) emitEmbeddingUsage(ctx context.Context, texts []string,
 func (p *OpenAIProvider) EmbedDimensions() int { return defaultEmbeddingDims }
 
 func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {

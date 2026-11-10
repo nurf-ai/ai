@@ -452,6 +452,8 @@ func (p *GeminiProvider) emitUsage(ctx context.Context, resp *genai.GenerateCont
 	if p.meter == nil || resp == nil || resp.UsageMetadata == nil {
 		return
 	}
+	// PromptTokenCount is the prompt total, the cached content included
+	// (CachedContentTokenCount is a subset of it): each share priced once.
 	in := int(resp.UsageMetadata.PromptTokenCount)
 	out := int(resp.UsageMetadata.CandidatesTokenCount)
 	cacheRead := int(resp.UsageMetadata.CachedContentTokenCount)
@@ -464,7 +466,7 @@ func (p *GeminiProvider) emitUsage(ctx context.Context, resp *genai.GenerateCont
 		OutputTokens:         out,
 		TotalTokens:          in + out,
 		CacheReadInputTokens: cacheRead,
-		EstimatedCostUSD:     EstimateCostFull(p.model, in, out, 0, cacheRead),
+		EstimatedCostUSD:     estimateCostCacheInPrompt(p.model, in, out, 0, cacheRead),
 		SystemPrompt:         TruncatePromptForDebug(sysPrompt),
 		UserPrompt:           TruncatePromptForDebug(userPrompt),
 		DebugSpanID:          DebugSpanIDFromCtx(ctx),

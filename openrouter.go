@@ -37,6 +37,6 @@ func NewOpenRouterProvider(apiKey, model string) *OpenRouterProvider {
 func newOpenRouterProvider(apiKey, model, baseURL string) *OpenRouterProvider {
 	cfg := openai.DefaultConfig(apiKey)
 	cfg.BaseURL = baseURL
-	cfg.HTTPClient = &http.Client{Transport: reportedCostTransport{}}
+	cfg.HTTPClient = &http.Client{Transport: reportedUsageTransport{}}
 	return &OpenRouterProvider{newOpenAICompat(cfg, model, "openrouter", "OpenRouter")}
 }

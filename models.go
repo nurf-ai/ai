@@ -142,6 +142,29 @@ func EstimateCostFull(model string, in, out, cw, cr int) float64 {
 		float64(cr)*p.CacheReadPerMillion) / 1_000_000
 }
 
+// estimateCostCacheInPrompt prices a call whose provider counts cache reads
+// and cache writes inside the prompt total (OpenAI, Gemini). EstimateCostFull
+// takes in without them (Anthropic's shape), so handing it the prompt total
+// plus the cached count would price the cached share twice. Here each prompt
+// token is priced once: reads at the cache-read rate, writes at the
+// cache-write rate, the rest at the input rate. A model with no cache-read
+// (or cache-write) rate prices those tokens as ordinary input, never as
+// free. Negative counts read as 0 and the ordinary part is clamped at 0, so
+// counts that do not add up never give a negative cost.
+func estimateCostCacheInPrompt(model string, prompt, out, cacheWrite, cacheRead int) float64 {
+	p := pricingTable[model]
+	prompt, out = max(prompt, 0), max(out, 0)
+	cacheWrite, cacheRead = max(cacheWrite, 0), max(cacheRead, 0)
+	if p.CacheReadPerMillion <= 0 {
+		cacheRead = 0
+	}
+	if p.CacheCreationPerMillion <= 0 {
+		cacheWrite = 0
+	}
+	ordinary := max(prompt-cacheRead-cacheWrite, 0)
+	return EstimateCostFull(model, ordinary, out, cacheWrite, cacheRead)
+}
+
 // EstimateVideoCost prices seconds of generated video for a per-second model.
 // resolution selects a per-resolution rate when the table has one; otherwise
 // the base rate applies. Unknown models are recorded as 0 (and reported via

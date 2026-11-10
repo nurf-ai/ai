@@ -246,6 +246,8 @@ Attribute calls via context — `ai.WithMeterCallerID`, `ai.WithMeterOperation`,
 
 Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per image), `EstimateVideoCost` (per second of video), `EstimateTTSCost` (per character of speech input), `EstimateSTTCost` (per minute of audio transcribed), `EstimateAudioCost` (per second of generated audio), and `EstimateVideoCostByTokens` / `EstimateImageCostByTokens` (actual token counts from provider response). Rates and context windows for all supported models are maintained in [`models.json`](models.json) — the single source of truth, embedded at compile time. An entry with `"pricing": "dynamic"` carries no rates: its provider reports each call's cost (OpenRouter's `usage.cost`) and that is what gets metered.
 
+Cached prompt tokens are priced once, at their own rate. OpenAI and Gemini count cached reads (and OpenAI's cache writes) inside `InputTokens`, the prompt total they report; Anthropic reports `CacheReadInputTokens` and `CacheCreationInputTokens` on top of it. A model with no cache-read or cache-write rate in `models.json` prices those tokens as ordinary input.
+
 ### System One
 
 Evaluate content with typed questions — get calibrated probabilities instead of raw LLM text. Supports boolean (noul), classification (choice), and ordinal (score) questions, batched in a single call.
