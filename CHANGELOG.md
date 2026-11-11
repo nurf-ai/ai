@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.6](https://github.com/nurf-ai/ai/compare/v0.19.5...v0.19.6) (2026-11-11)
+
+
+### Bug Fixes
+
+* honor output limits in compatible chat providers ([89df9e1](https://github.com/nurf-ai/ai/commit/89df9e191432dd5672284ea8191bec048f4ddd2f))
+
 ## [0.19.5](https://github.com/nurf-ai/ai/compare/v0.19.4...v0.19.5) (2026-11-10)
 
 
