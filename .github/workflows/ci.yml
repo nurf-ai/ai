@@ -12,9 +12,11 @@ jobs:
   go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -23,13 +25,36 @@ jobs:
 
       - run: go vet ./...
 
-      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+      - uses: golangci/golangci-lint-action@v9.3.0
         with:
           version: latest
 
       - run: go test -race -coverprofile=coverage.out ./...
 
-      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+      - uses: codecov/codecov-action@v7.0.0
         with:
           files: coverage.out
         if: github.event_name == 'push'
+
+  # Keep lockfile coverage and upstream provenance checked independently.
+  actions-lock:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: gh extension install github/gh-actions-lock --pin v0.4.1
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: gh actions-lock --verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  actions-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      # 1.32.0 is the first zizmor release that understands actions.lock.
+      - run: pipx run zizmor==1.32.0 --min-severity low --offline .github/workflows
