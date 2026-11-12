@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.0](https://github.com/nurf-ai/ai/compare/v0.19.6...v0.20.0) (2026-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename system one to decisions and add gemini provider
+
+### Features
+
+* rename system one to decisions and add gemini provider ([f1a6033](https://github.com/nurf-ai/ai/commit/f1a60331bc51a2bb17ec4526b8e5d5059f25331f))
+
 ## [0.19.6](https://github.com/nurf-ai/ai/compare/v0.19.5...v0.19.6) (2026-11-11)
 
 
