@@ -152,7 +152,7 @@
 
 ### Features
 
-* configurable system one provider, fal+openrouter image providers ([52e2e91](https://github.com/nurf-ai/ai/commit/52e2e914ef2149efb5f9ccf34c18007a50e3f8c6))
+* configurable decisions provider, fal+openrouter image providers ([52e2e91](https://github.com/nurf-ai/ai/commit/52e2e914ef2149efb5f9ccf34c18007a50e3f8c6))
 
 ## [0.12.0](https://github.com/nurf-ai/ai/compare/v0.11.2...v0.12.0) (2026-09-29)
 
@@ -166,8 +166,8 @@
 
 ### Bug Fixes
 
-* **meter:** image/video/audio/TTS/System One usage carries the debug span ([41650db](https://github.com/nurf-ai/ai/commit/41650db4495c7bacbd8ba86324b2706b8cbac341))
-* **systemone:** keep zero noul/score/confidence in answer JSON ([41650db](https://github.com/nurf-ai/ai/commit/41650db4495c7bacbd8ba86324b2706b8cbac341))
+* **meter:** image/video/audio/TTS/Decisions usage carries the debug span ([41650db](https://github.com/nurf-ai/ai/commit/41650db4495c7bacbd8ba86324b2706b8cbac341))
+* **decisions:** keep zero noul/score/confidence in answer JSON ([41650db](https://github.com/nurf-ai/ai/commit/41650db4495c7bacbd8ba86324b2706b8cbac341))
 
 ## [0.11.1](https://github.com/nurf-ai/ai/compare/v0.11.0...v0.11.1) (2026-09-27)
 
@@ -181,19 +181,19 @@
 
 ### ⚠ BREAKING CHANGES
 
-* JudgmentProvider renamed to SystemOneProvider, all related types and functions renamed accordingly. The JavaScript-facing names changed accordingly.
+* JudgmentProvider renamed to DecisionsProvider, all related types and functions renamed accordingly. The JavaScript-facing names changed accordingly.
 
 ### Features
 
-* rename JudgmentProvider → SystemOneProvider (Typesafe System One) ([f818e41](https://github.com/nurf-ai/ai/commit/f818e411e65e62ecd01bc055ec1f7b6521259c72))
+* rename JudgmentProvider → DecisionsProvider (Typesafe Decisions) ([f818e41](https://github.com/nurf-ai/ai/commit/f818e411e65e62ecd01bc055ec1f7b6521259c72))
 
 ## [0.10.0](https://github.com/nurf-ai/ai/compare/v0.9.3...v0.10.0) (2026-09-19)
 
 
 ### Features
 
-* add SystemOneProvider interface with Typesafe (Jev) implementation ([92ba580](https://github.com/nurf-ai/ai/commit/92ba5800233472bfd4061bda34249df408962d6c))
-* add SystemOneProvider with Typesafe (Jev) implementation ([bb76e3c](https://github.com/nurf-ai/ai/commit/bb76e3c77e9a98372208d6bacf423193985ab2ee))
+* add DecisionsProvider interface with Typesafe (Jev) implementation ([92ba580](https://github.com/nurf-ai/ai/commit/92ba5800233472bfd4061bda34249df408962d6c))
+* add DecisionsProvider with Typesafe (Jev) implementation ([bb76e3c](https://github.com/nurf-ai/ai/commit/bb76e3c77e9a98372208d6bacf423193985ab2ee))
 
 ## [0.9.3](https://github.com/nurf-ai/ai/compare/v0.9.2...v0.9.3) (2026-09-09)
 

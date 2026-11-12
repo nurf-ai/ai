@@ -14,9 +14,9 @@ import (
 
 const defaultTypesafeBase = "https://api.typesafe.ai"
 
-// TypesafeSystemOneProvider implements SystemOneProvider using the Typesafe
-// System One API (Jev model).
-type TypesafeSystemOneProvider struct {
+// TypesafeDecisionsProvider implements DecisionsProvider using the Typesafe
+// Decisions API (Jev model).
+type TypesafeDecisionsProvider struct {
 	apiKey string
 	model  string
 	base   string
@@ -24,12 +24,12 @@ type TypesafeSystemOneProvider struct {
 	meter  MeterHook
 }
 
-// TypesafeOption configures a TypesafeSystemOneProvider.
-type TypesafeOption func(*TypesafeSystemOneProvider)
+// TypesafeOption configures a TypesafeDecisionsProvider.
+type TypesafeOption func(*TypesafeDecisionsProvider)
 
 // WithTypesafeHTTPClient overrides the HTTP client.
 func WithTypesafeHTTPClient(h *http.Client) TypesafeOption {
-	return func(p *TypesafeSystemOneProvider) {
+	return func(p *TypesafeDecisionsProvider) {
 		if h != nil {
 			p.http = h
 		}
@@ -38,7 +38,7 @@ func WithTypesafeHTTPClient(h *http.Client) TypesafeOption {
 
 // WithTypesafeBase overrides the API base URL.
 func WithTypesafeBase(base string) TypesafeOption {
-	return func(p *TypesafeSystemOneProvider) {
+	return func(p *TypesafeDecisionsProvider) {
 		if base != "" {
 			p.base = strings.TrimRight(base, "/")
 		}
@@ -47,15 +47,15 @@ func WithTypesafeBase(base string) TypesafeOption {
 
 // WithTypesafeModel overrides the model (default "jev-1.14.0").
 func WithTypesafeModel(model string) TypesafeOption {
-	return func(p *TypesafeSystemOneProvider) {
+	return func(p *TypesafeDecisionsProvider) {
 		if model != "" {
 			p.model = model
 		}
 	}
 }
 
-func NewTypesafeSystemOneProvider(apiKey string, opts ...TypesafeOption) *TypesafeSystemOneProvider {
-	p := &TypesafeSystemOneProvider{
+func NewTypesafeDecisionsProvider(apiKey string, opts ...TypesafeOption) *TypesafeDecisionsProvider {
+	p := &TypesafeDecisionsProvider{
 		apiKey: apiKey,
 		model:  "jev-1.14.0",
 		base:   defaultTypesafeBase,
@@ -67,15 +67,15 @@ func NewTypesafeSystemOneProvider(apiKey string, opts ...TypesafeOption) *Typesa
 	return p
 }
 
-func (p *TypesafeSystemOneProvider) SetMeter(hook MeterHook) { p.meter = hook }
+func (p *TypesafeDecisionsProvider) SetMeter(hook MeterHook) { p.meter = hook }
 
 type typesafeRequest struct {
 	State     any                          `json:"state"`
 	Model     string                       `json:"model"`
-	Questions map[string]SystemOneQuestion `json:"questions"`
+	Questions map[string]DecisionsQuestion `json:"questions"`
 }
 
-func (p *TypesafeSystemOneProvider) Judge(ctx context.Context, req *SystemOneRequest) (*SystemOneResult, error) {
+func (p *TypesafeDecisionsProvider) Judge(ctx context.Context, req *DecisionsRequest) (*DecisionsResult, error) {
 	wireReq := typesafeRequest{
 		State:     req.State,
 		Model:     p.model,
@@ -111,7 +111,7 @@ func (p *TypesafeSystemOneProvider) Judge(ctx context.Context, req *SystemOneReq
 		}
 	}
 
-	var result SystemOneResult
+	var result DecisionsResult
 	if err := json.Unmarshal(data, &result); err != nil {
 		return nil, fmt.Errorf("typesafe: decode response: %w", err)
 	}

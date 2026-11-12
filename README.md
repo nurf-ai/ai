@@ -10,7 +10,7 @@
 
 <p align="center">Multimodal Go module for building across AI providers, with realistic cost tracking baked in, not just token counts.</p>
 
-<p align="center"><sub>From the obvious to the overlooked: chat, streaming, reasoning, tool use, structured output, system one, embeddings, speech-to-text, text-to-speech, sound effects, music generation, realtime voice, moderation, image gen & editing, video gen.</sub></p>
+<p align="center"><sub>From the obvious to the overlooked: chat, streaming, reasoning, tool use, structured output, decisions, embeddings, speech-to-text, text-to-speech, sound effects, music generation, realtime voice, moderation, image gen & editing, video gen.</sub></p>
 
 ## Install
 
@@ -248,16 +248,16 @@ Built-in per-model cost estimation via `EstimateCostFull` (tokens / flat per ima
 
 Cached prompt tokens are priced once, at their own rate. OpenAI and Gemini count cached reads (and OpenAI's cache writes) inside `InputTokens`, the prompt total they report; Anthropic reports `CacheReadInputTokens` and `CacheCreationInputTokens` on top of it. A model with no cache-read or cache-write rate in `models.json` prices those tokens as ordinary input.
 
-### System One
+### Decisions
 
-Evaluate content with typed questions — get calibrated probabilities instead of raw LLM text. Supports boolean (noul), classification (choice), and ordinal (score) questions, batched in a single call.
+Evaluate content with typed questions and get calibrated probabilities instead of raw LLM text. Supports boolean (noul), classification (choice), and ordinal (score) questions, batched in a single call.
 
 ```go
-judge := ai.NewSystemOneProvider("typesafe", apiKey)
+judge := ai.NewDecisionsProvider("typesafe", apiKey, "")
 
-result, err := judge.Judge(ctx, &ai.SystemOneRequest{
+result, err := judge.Judge(ctx, &ai.DecisionsRequest{
     State: "Help! My payouts have been failing for 3 days!",
-    Questions: map[string]ai.SystemOneQuestion{
+    Questions: map[string]ai.DecisionsQuestion{
         "is_urgent": ai.Noul("Does this message convey urgency?"),
         "anger":     ai.Score("How angry is the user?", []string{
             "Calm", "Mildly annoyed", "Frustrated", "Very angry",
@@ -267,18 +267,26 @@ result, err := judge.Judge(ctx, &ai.SystemOneRequest{
 // result.Answers["is_urgent"].Noul  → 0.97  (boolean probability)
 // result.Answers["anger"].Score     → 2.99  (ordinal 0–3)
 ```
+Use `NewDecisionsProvider("gemini", apiKey, "")` for [Gemini Decisions](https://aistudio.google.com/docs/decisions-api), defaulting to `gemini-decision-1`. Both providers share the question builders and `SetDecisionsMeter`.
+
+For Gemini, `State` accepts a string, a `DecisionsContent` block, or a `[]DecisionsContent` slice containing text, image, audio, video, or PDF blocks. Other Go values are serialized to JSON text. Media blocks use `Data` (base64) or `URI` (Files API or HTTPS), plus `MIMEType` and optional image/video `Resolution`. Instructions accept text or text blocks. The adapter translates `NoulWith` descriptions and nil choice descriptions to Gemini's wire format.
+
+The rename replaces the exported API, including request, question, answer, usage and result types, constructors, and the meter helper. Update callers to the `Decisions` names.
+
 ### Conversation caching and decision pricing
 
 Anthropic chat and streaming honor `Message.CacheControl` on the last content block of user, assistant and tool-result messages, as well as system messages. Callers can retain a previous conversation boundary while advancing a second one across long tool batches. Keep the total at four markers, including system markers added by `WithCacheSysPrompt`. Cache writes have a premium; measure full request sequences before assuming savings.
 
 The Typesafe default is pinned to `jev-1.14.0`; `WithTypesafeModel` overrides it. Jev 1.13/1.14 and the `jev-latest` alias are priced at $0.042 per million input tokens with free output in the bundled table ([provider models](https://docs.typesafe.ai/models)). Meter events use the response model, or the requested model when the response omits it.
 
+Gemini Decision 1 has a 262,144-token context window and costs $0.10 per million input tokens across all modalities, with zero output tokens ([pricing](https://aistudio.google.com/docs/pricing#gemini-decision)).
+
 ## Providers
 
 | Factory | Providers | Features |
 |---------|-----------|----------|
 | `NewLLMProvider(provider, apiKey, model)` | anthropic, openai, gemini, ollama, huggingface, openrouter | Chat, streaming, structured output, tools |
-| `NewSystemOneProvider(provider, apiKey)` | typesafe | Typed System One (noul, choice, score) |
+| `NewDecisionsProvider(provider, apiKey, model)` | typesafe, gemini | Typed Decisions (noul, choice, score) |
 | `NewImageProvider(ctx, provider, apiKey, model)` | openai, gemini | Image generation / editing |
 | `NewFalImageProvider(apiKey, model)` | fal | Image generation (FLUX schnell/dev) |
 | `NewOpenRouterImageProvider(apiKey, model)` | openrouter | Image generation (FLUX, multi-provider) |
@@ -291,11 +299,13 @@ The Typesafe default is pinned to `jev-1.14.0`; `WithTypesafeModel` overrides it
 | `NewRealtimeProvider(provider, apiKey, model)` | openai | Realtime voice (WebSocket, bidirectional audio + tool calls) |
 | `NewEmbedder(provider, apiKey)` | openai | Text embeddings |
 
+The Gemini Decisions entry is unverified against the live API (∅); the integration suite skips it without a key.
+
 Each ✓ means the integration test passes, ✗ means it fails, and — means it hasn't been run yet:
 
 <!-- testmatrix:start -->
 
-| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | System One | Embeddings | STT | TTS | TTSFX | TTMusic | RT Voice | RT Voice Tools | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
+| Provider | Model | Chat | Stream | Reasoning | Structured Output | From Schema | Tools | Decisions | Embeddings | STT | TTS | TTSFX | TTMusic | RT Voice | RT Voice Tools | Moderation | Image Gen | Img Edit | Img Edit Ref | Txt2Vid | Img2Vid | Caching |
 |----------|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Anthropic | `claude-haiku-4-5` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | ✓ |
 | OpenAI | `gpt-4o-mini` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
@@ -307,6 +317,7 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | OpenAI | `omni-moderation-latest` | | | | | | | | | | | | | | | ✓ | | | | | | |
 | OpenAI | `gpt-image-1` | | | | | | | | | | | | | | | | ✓ | ✓ | | | | |
 | Typesafe | `jev-latest` | | | | | | | ✓ | | | | | | | | | | | | | | |
+| Gemini | `gemini-decision-1` | | | | | | | skip | | | | | | | | | | | | | | |
 | Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |
 | Gemini | `gemini-2.5-flash-image` | | | | | | | | | | | | | | | | ✓ | ✓ | ✓ | | | |
 | Gemini | `gemini-omni-1.1-flash` | | | | | | | | | | | | | | | | | | | ✓ | ✓ | |

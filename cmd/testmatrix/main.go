@@ -45,7 +45,7 @@ var columns = []column{
 	{"Structured Output", "StructuredOutput"},
 	{"From Schema", "StructuredOutputFromSchema"},
 	{"Tools", "ChatWithTools"},
-	{"System One", "SystemOne"},
+	{"Decisions", "Decisions"},
 	{"Embeddings", "Embeddings"},
 	{"STT", "STT"},
 	{"TTS", "TTS"},
@@ -76,7 +76,7 @@ var leafSubtests = func() map[string]bool {
 	m["TTMusic"] = true
 	m["TextRoundtrip"] = true
 	m["ToolCall"] = true
-	for _, s := range systemOneSubtests {
+	for _, s := range decisionsSubtests {
 		m[s] = true
 	}
 	return m
@@ -92,9 +92,8 @@ type row struct {
 	group map[string][]string
 }
 
-// systemOneSubtests are the Typesafe System One question types; the System
-// One cell passes only when all of them do.
-var systemOneSubtests = []string{"Noul", "Choice", "Score", "MultiQuestion"}
+// decisionsSubtests are the Decisions question types; the Decisions cell passes only when all of them do.
+var decisionsSubtests = []string{"Noul", "Choice", "Score", "MultiQuestion"}
 
 var chatCaps = map[string]bool{
 	"Chat": true, "Stream": true, "StreamWithChan": true,
@@ -120,7 +119,8 @@ var rows = []row{
 	{provider: "OpenAI", model: "gpt-realtime-2.1-mini", testPrefix: "TestRealtime_Integration", only: map[string]bool{"TextRoundtrip": true, "ToolCall": true}},
 	{provider: "OpenAI", model: "omni-moderation-latest", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Moderation": true}},
 	{provider: "OpenAI", model: "gpt-image-1", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
-	{provider: "Typesafe", model: "jev-latest", testPrefix: "TestTypesafe_Integration", only: map[string]bool{"SystemOne": true}, group: map[string][]string{"SystemOne": systemOneSubtests}},
+	{provider: "Typesafe", model: "jev-latest", testPrefix: "TestTypesafe_Integration", only: map[string]bool{"Decisions": true}, group: map[string][]string{"Decisions": decisionsSubtests}},
+	{provider: "Gemini", model: "gemini-decision-1", testPrefix: "TestGeminiDecisions_Integration", only: map[string]bool{"Decisions": true}, group: map[string][]string{"Decisions": decisionsSubtests}},
 	{provider: "Gemini", model: "gemini-3.6-flash", testPrefix: "TestGemini_Integration", only: chatCaps},
 	{provider: "Gemini", model: "gemini-2.5-flash-image", testPrefix: "TestGemini_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true, "ImageEditWithReference": true}},
 	{provider: "Gemini", model: "gemini-omni-1.1-flash", testPrefix: "TestGeminiVideo_Integration", only: map[string]bool{"TextToVideo": true, "VideoGenerate": true}},
@@ -145,6 +145,7 @@ var rows = []row{
 }
 
 var parentToProvider = map[string]string{
+	"TestGeminiDecisions_Integration": "Gemini",
 	"TestAnthropicChat_Integration":   "Anthropic",
 	"TestOpenAI_Integration":          "OpenAI",
 	"TestGemini_Integration":          "Gemini",

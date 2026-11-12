@@ -11,8 +11,8 @@ const (
 	QuestionScore  = "score"
 )
 
-// SystemOneQuestion is one typed question in a System One request.
-type SystemOneQuestion struct {
+// DecisionsQuestion is one typed question in a Decisions request.
+type DecisionsQuestion struct {
 	Type         string `json:"type"`
 	Instructions any    `json:"instructions"`
 	Criteria     any    `json:"criteria,omitempty"`
@@ -25,13 +25,13 @@ type NoulCriteria struct {
 }
 
 // Noul builds a boolean-probability question.
-func Noul(instructions any) SystemOneQuestion {
-	return SystemOneQuestion{Type: QuestionNoul, Instructions: instructions}
+func Noul(instructions any) DecisionsQuestion {
+	return DecisionsQuestion{Type: QuestionNoul, Instructions: instructions}
 }
 
 // NoulWith builds a noul question with explicit true/false descriptions.
-func NoulWith(instructions any, trueDesc, falseDesc string) SystemOneQuestion {
-	return SystemOneQuestion{
+func NoulWith(instructions any, trueDesc, falseDesc string) DecisionsQuestion {
+	return DecisionsQuestion{
 		Type:         QuestionNoul,
 		Instructions: instructions,
 		Criteria:     NoulCriteria{True: trueDesc, False: falseDesc},
@@ -40,8 +40,8 @@ func NoulWith(instructions any, trueDesc, falseDesc string) SystemOneQuestion {
 
 // Choice builds a single-selection question. Each key is an option; a nil
 // value means no description for that option.
-func Choice(instructions any, options map[string]*string) SystemOneQuestion {
-	return SystemOneQuestion{
+func Choice(instructions any, options map[string]*string) DecisionsQuestion {
+	return DecisionsQuestion{
 		Type:         QuestionChoice,
 		Instructions: instructions,
 		Criteria:     options,
@@ -50,18 +50,18 @@ func Choice(instructions any, options map[string]*string) SystemOneQuestion {
 
 // Score builds an ordinal rating question. Levels are ordered low→high,
 // minimum 2.
-func Score(instructions any, levels []string) SystemOneQuestion {
-	return SystemOneQuestion{
+func Score(instructions any, levels []string) DecisionsQuestion {
+	return DecisionsQuestion{
 		Type:         QuestionScore,
 		Instructions: instructions,
 		Criteria:     levels,
 	}
 }
 
-// SystemOneAnswer is the typed response for one question. Fields are populated
-// based on Type: noul → Noul; choice → Choice/Probabilities/Confidence;
+// DecisionsAnswer is the typed response for one question. Fields are populated
+// based on Type: noul → Noul/Confidence; choice → Choice/Probabilities/Confidence;
 // score → Score/Legend/Probabilities/Confidence.
-type SystemOneAnswer struct {
+type DecisionsAnswer struct {
 	Type          string             `json:"type"`
 	Noul          float64            `json:"noul,omitempty"`
 	Choice        string             `json:"choice,omitempty"`
@@ -75,13 +75,14 @@ type SystemOneAnswer struct {
 // noul of 0, a score at the lowest level and a confidence of 0 are answers,
 // and the struct's omitempty would drop them. An unknown type writes every
 // field as tagged.
-func (a SystemOneAnswer) MarshalJSON() ([]byte, error) {
+func (a DecisionsAnswer) MarshalJSON() ([]byte, error) {
 	switch a.Type {
 	case QuestionNoul:
 		return json.Marshal(struct {
-			Type string  `json:"type"`
-			Noul float64 `json:"noul"`
-		}{a.Type, a.Noul})
+			Type       string  `json:"type"`
+			Noul       float64 `json:"noul"`
+			Confidence float64 `json:"confidence,omitempty"`
+		}{a.Type, a.Noul, a.Confidence})
 	case QuestionChoice:
 		return json.Marshal(struct {
 			Type          string             `json:"type"`
@@ -98,60 +99,79 @@ func (a SystemOneAnswer) MarshalJSON() ([]byte, error) {
 			Confidence    float64            `json:"confidence"`
 		}{a.Type, a.Score, a.Legend, a.Probabilities, a.Confidence})
 	}
-	type plain SystemOneAnswer // same fields, no MarshalJSON: no recursion
+	type plain DecisionsAnswer // same fields, no MarshalJSON: no recursion
 	return json.Marshal(plain(a))
 }
 
-// SystemOneRequest is the input to a System One call.
-type SystemOneRequest struct {
-	State     any                          `json:"state"`
-	Questions map[string]SystemOneQuestion `json:"questions"`
+// DecisionsContent is a Gemini Decisions input block. Data holds base64-encoded
+// bytes; URI accepts a Files API URI or an HTTPS URL. Set MIMEType for media.
+type DecisionsContent struct {
+	Type       string `json:"type"`
+	Text       string `json:"text,omitempty"`
+	Data       string `json:"data,omitempty"`
+	URI        string `json:"uri,omitempty"`
+	MIMEType   string `json:"mime_type,omitempty"`
+	Resolution string `json:"resolution,omitempty"`
 }
 
-// SystemOneUsage tracks token consumption for a System One call.
-type SystemOneUsage struct {
+// DecisionsRequest is the input to a Decisions call.
+type DecisionsRequest struct {
+	// State is shared context. Gemini accepts text or DecisionsContent blocks;
+	// other values are serialized as JSON text. Typesafe receives State as JSON.
+	State     any                          `json:"state"`
+	Questions map[string]DecisionsQuestion `json:"questions"`
+}
+
+// DecisionsUsage tracks token consumption for a Decisions call.
+type DecisionsUsage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 }
 
-// SystemOneResult is the output of a System One call.
-type SystemOneResult struct {
+// DecisionsResult is the output of a Decisions call.
+type DecisionsResult struct {
 	Model   string                     `json:"model"`
-	Answers map[string]SystemOneAnswer `json:"answers"`
-	Usage   SystemOneUsage             `json:"usage"`
+	Answers map[string]DecisionsAnswer `json:"answers"`
+	Usage   DecisionsUsage             `json:"usage"`
 }
 
-// SystemOneProvider evaluates content against typed questions and returns
+// DecisionsProvider evaluates content against typed questions and returns
 // structured answers with calibrated confidence.
-type SystemOneProvider interface {
-	Judge(ctx context.Context, req *SystemOneRequest) (*SystemOneResult, error)
+type DecisionsProvider interface {
+	Judge(ctx context.Context, req *DecisionsRequest) (*DecisionsResult, error)
 }
 
-// SystemOneMeterable is implemented by System One providers that accept a meter hook.
-type SystemOneMeterable interface {
+// DecisionsMeterable is implemented by Decisions providers that accept a meter hook.
+type DecisionsMeterable interface {
 	SetMeter(MeterHook)
 }
 
-// SetSystemOneMeter attaches a meter hook to any SystemOneProvider that
-// satisfies SystemOneMeterable.
-func SetSystemOneMeter(j SystemOneProvider, hook MeterHook) {
+// SetDecisionsMeter attaches a meter hook to any DecisionsProvider that
+// satisfies DecisionsMeterable.
+func SetDecisionsMeter(j DecisionsProvider, hook MeterHook) {
 	if hook == nil || j == nil {
 		return
 	}
-	if m, ok := j.(SystemOneMeterable); ok {
+	if m, ok := j.(DecisionsMeterable); ok {
 		m.SetMeter(hook)
 	}
 }
 
-// NewSystemOneProvider creates a SystemOneProvider from a provider name.
-func NewSystemOneProvider(providerName, apiKey, model string) SystemOneProvider {
+// NewDecisionsProvider creates a DecisionsProvider from a provider name.
+func NewDecisionsProvider(providerName, apiKey, model string) DecisionsProvider {
 	switch providerName {
+	case "gemini":
+		var opts []GeminiDecisionsOption
+		if model != "" {
+			opts = append(opts, WithGeminiDecisionsModel(model))
+		}
+		return NewGeminiDecisionsProvider(apiKey, opts...)
 	case "typesafe":
 		var opts []TypesafeOption
 		if model != "" {
 			opts = append(opts, WithTypesafeModel(model))
 		}
-		return NewTypesafeSystemOneProvider(apiKey, opts...)
+		return NewTypesafeDecisionsProvider(apiKey, opts...)
 	default:
 		return nil
 	}

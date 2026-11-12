@@ -1,6 +1,6 @@
 # AGENTS.md — ai
 
-Multi-provider, multi-modal Go AI library with realistic per-model cost tracking. Covers chat, streaming, structured output, System One, image/video generation, speech-to-text, text-to-speech, realtime voice, embeddings, and moderation — with a smart routing engine that picks the cheapest available provider per request. Single `package ai`, module `github.com/nurf-ai/ai`.
+Multi-provider, multi-modal Go AI library with realistic per-model cost tracking. Covers chat, streaming, structured output, Decisions, image/video generation, speech-to-text, text-to-speech, realtime voice, embeddings, and moderation — with a smart routing engine that picks the cheapest available provider per request. Single `package ai`, module `github.com/nurf-ai/ai`.
 
 ## Files
 
@@ -42,8 +42,9 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `elevenlabs_audio_provider.go` | ElevenLabs sound effects (`eleven_text_to_sound_v2`), audio returned as a data: URI |
 | `fal_audio_provider.go` | fal audio generation (Sonilo TTSFX + TTMusic, async queue) |
 | `moderation_provider.go` | `ModerationProvider` interface |
-| `system_one_provider.go` | `SystemOneProvider` interface, question builders (`Noul`, `Choice`, `Score`), factory |
-| `typesafe.go` | Typesafe System One provider (Jev model) |
+| `decisions_provider.go` | `DecisionsProvider` interface, question builders (`Noul`, `Choice`, `Score`), factory |
+| `gemini_decisions_provider.go` | Gemini Decisions provider (`gemini-decision-1`) |
+| `typesafe.go` | Typesafe Decisions provider (Jev model) |
 | `meter.go` | Usage metering hooks, prompt block attribution |
 | `models.go` | Cost estimation (`EstimateCostFull`, `EstimateVideoCost`, `EstimateVideoCostByTokens`, `EstimateImageCostByTokens`, `EstimateTTSCost`, `EstimateSTTCost`, `EstimateRealtimeCost`) + context window lookup, loads `models.json` via `go:embed` |
 | `models.json` | Per-model pricing + context windows (single source of truth); `"pricing": "dynamic"` = priced by the cost the provider reports per call |
