@@ -31,7 +31,7 @@ jobs:
 
       - run: go test -race -coverprofile=coverage.out ./...
 
-      - uses: codecov/codecov-action@v7.0.0
+      - uses: codecov/codecov-action@v7.1.1
         with:
           files: coverage.out
         if: github.event_name == 'push'
