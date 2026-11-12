@@ -6,7 +6,7 @@ workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-go@v7.0.0'
-        - 'codecov/codecov-action@v7.0.0'
+        - 'codecov/codecov-action@v7.1.1'
         - 'golangci/golangci-lint-action@v9.3.0'
     '.github/workflows/release-please.yml':
         - 'googleapis/release-please-action@v5.0.0'
@@ -32,9 +32,9 @@ dependencies:
         commit: 'sha1-b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'
         owner_id: 44036562
         repo_id: 192624594
-    'codecov/codecov-action@v7.0.0':
-        ref: 'v7.0.0'
-        commit: 'sha1-fb8b3582c8e4def4969c97caa2f19720cb33a72f'
+    'codecov/codecov-action@v7.1.1':
+        ref: 'v7.1.1'
+        commit: 'sha1-303a32d7a59b442fa8d48b6a1cc6825c09c847a5'
         owner_id: 8226205
         repo_id: 200299178
         uses:
