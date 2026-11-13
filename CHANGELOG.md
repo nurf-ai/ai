@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/nurf-ai/ai/compare/v0.20.0...v0.20.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **fal:** cancel queued requests when status polling is interrupted ([fb0d626](https://github.com/nurf-ai/ai/commit/fb0d62671df51733d18894fe1cc8e79c64fcdc58))
+
 ## [0.20.0](https://github.com/nurf-ai/ai/compare/v0.19.6...v0.20.0) (2026-11-12)
 
 
