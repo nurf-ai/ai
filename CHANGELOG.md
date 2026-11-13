@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/nurf-ai/ai/compare/v0.20.1...v0.21.0) (2026-11-13)
+
+
+### Features
+
+* add FilePart for PDF, audio and video input ([22062b2](https://github.com/nurf-ai/ai/commit/22062b27b0564f87a4aa3915870f4823928286ae))
+
 ## [0.20.1](https://github.com/nurf-ai/ai/compare/v0.20.0...v0.20.1) (2026-11-13)
 
 
