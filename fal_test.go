@@ -147,14 +147,42 @@ func TestFalClient_WaitCancelsOnCtx(t *testing.T) {
 		}
 	})
 	c := NewFalClient("k", WithFalQueueBase(srv.URL), WithFalPollInterval(5*time.Millisecond))
+	req, err := c.Submit(context.Background(), "m", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
-	_, err := c.Run(ctx, "m", map[string]any{})
+	_, err = c.Wait(ctx, req)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected deadline error, got %v", err)
 	}
 	if cancelled.Load() != 1 {
 		t.Fatal("expected cancel to be called")
+	}
+}
+
+func TestFalClient_WaitCancelsDuringStatus(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var cancelled atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/cancel") {
+			cancelled.Add(1)
+			return
+		}
+		cancel()
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+	c := NewFalClient("k")
+	req := &FalRequest{StatusURL: srv.URL + "/status", CancelURL: srv.URL + "/cancel"}
+	_, err := c.Wait(ctx, req)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Wait error = %v, want context.Canceled", err)
+	}
+	if got := cancelled.Load(); got != 1 {
+		t.Fatalf("cancel requests = %d, want 1", got)
 	}
 }
 

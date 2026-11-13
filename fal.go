@@ -170,7 +170,15 @@ func (c *FalClient) Cancel(ctx context.Context, req *FalRequest) error {
 }
 
 // Wait polls until the request completes or ctx is done.
-func (c *FalClient) Wait(ctx context.Context, req *FalRequest) (*FalStatus, error) {
+func (c *FalClient) Wait(ctx context.Context, req *FalRequest) (_ *FalStatus, err error) {
+	defer func() {
+		if err != nil && ctx.Err() != nil {
+			// Cancellation can interrupt either the status request or the poll delay.
+			cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			defer cancel()
+			_ = c.Cancel(cctx, req)
+		}
+	}()
 	interval := c.pollInterval
 	for {
 		st, err := c.Status(ctx, req)
@@ -183,10 +191,6 @@ func (c *FalClient) Wait(ctx context.Context, req *FalRequest) (*FalStatus, erro
 		logger.Log(traceLevel, "fal waiting", zap.String("request_id", req.RequestID), zap.String("status", st.Status), zap.Int("queue_position", st.QueuePosition))
 		select {
 		case <-ctx.Done():
-			// Best effort: free the runner slot if we bail while queued.
-			cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-			_ = c.Cancel(cctx, req)
-			cancel()
 			return nil, ctx.Err()
 		case <-time.After(interval):
 		}
