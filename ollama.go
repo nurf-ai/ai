@@ -32,6 +32,9 @@ func (p *OllamaProvider) WithMeter(hook MeterHook) *OllamaProvider {
 	return p
 }
 
+// AcceptsFile is always false: Ollama takes images only.
+func (p *OllamaProvider) AcceptsFile(string) bool { return false }
+
 func (p *OllamaProvider) SetMeter(hook MeterHook)            { p.meter = hook }
 func (p *OllamaProvider) SetModeration(m ModerationProvider) { p.moderation = m }
 
@@ -114,6 +117,9 @@ func (p *OllamaProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 // the schema is prompted for directly; images ride along as chat parts for
 // vision-capable models.
 func (p *OllamaProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	if err := checkPartsFiles(parts, acceptsNoFile, 0); err != nil {
+		return nil, err
+	}
 	userText, hasImage := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
@@ -149,6 +155,9 @@ func (p *OllamaProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 }
 
 func (p *OllamaProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	if err := checkFileParts(messages, acceptsNoFile, 0); err != nil {
+		return nil, err
+	}
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -253,6 +262,9 @@ func (p *OllamaProvider) Chat(ctx context.Context, messages []Message, tools []T
 }
 
 func (p *OllamaProvider) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	if err := checkFileParts(messages, acceptsNoFile, 0); err != nil {
+		return nil, err
+	}
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {

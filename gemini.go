@@ -103,6 +103,9 @@ func (p *GeminiProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 // CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
 // multimodal user turn (text + base64 images).
 func (p *GeminiProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	if err := checkPartsFiles(parts, geminiAcceptsFile, geminiInlineLimit); err != nil {
+		return nil, err
+	}
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
@@ -136,6 +139,10 @@ func (p *GeminiProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 	return result, nil
 }
 
+// AcceptsFile reports whether a FilePart of mediaType is sent inline:
+// application/pdf, audio/* and video/mp4 (together up to 20 MiB per request).
+func (p *GeminiProvider) AcceptsFile(mediaType string) bool { return geminiAcceptsFile(mediaType) }
+
 // geminiPartsFromParts converts a multimodal turn into genai parts. ImagePart
 // carries base64 text while genai.Blob wants raw bytes (the SDK encodes on the
 // wire), so the image is decoded here.
@@ -145,6 +152,8 @@ func geminiPartsFromParts(parts []Part) []*genai.Part {
 		switch v := p.(type) {
 		case ImagePart:
 			out = append(out, &genai.Part{InlineData: &genai.Blob{MIMEType: v.MediaType, Data: imagePartBytes(v)}})
+		case FilePart:
+			out = append(out, &genai.Part{InlineData: &genai.Blob{MIMEType: normalizeMediaType(v.MediaType), Data: v.Data}})
 		case TextPart:
 			out = append(out, genai.NewPartFromText(v.Text))
 		}
@@ -156,6 +165,9 @@ func geminiPartsFromParts(parts []Part) []*genai.Part {
 }
 
 func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	if err := checkFileParts(messages, geminiAcceptsFile, geminiInlineLimit); err != nil {
+		return nil, err
+	}
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -244,6 +256,9 @@ func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, tools []T
 }
 
 func (p *GeminiProvider) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	if err := checkFileParts(messages, geminiAcceptsFile, geminiInlineLimit); err != nil {
+		return nil, err
+	}
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {

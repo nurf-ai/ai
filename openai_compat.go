@@ -27,6 +27,7 @@ type openAICompat struct {
 }
 
 func newOpenAICompat(cfg openai.ClientConfig, model, provider, name string) openAICompat {
+	cfg = withFilePartTransport(cfg)
 	raw := openai.NewClientWithConfig(cfg)
 	client := instructor.FromOpenAI(
 		raw,
@@ -44,6 +45,11 @@ func newOpenAICompat(cfg openai.ClientConfig, model, provider, name string) open
 
 func (p *openAICompat) SetMeter(hook MeterHook)            { p.meter = hook }
 func (p *openAICompat) SetModeration(m ModerationProvider) { p.moderation = m }
+
+// AcceptsFile reports whether a FilePart of mediaType is sent natively:
+// application/pdf, audio/wav and audio/mpeg. Whether the routed model reads
+// it is up to the host.
+func (p *openAICompat) AcceptsFile(mediaType string) bool { return openaiAcceptsFile(mediaType) }
 
 func (p *openAICompat) Name() string              { return p.name }
 func (p *openAICompat) Model() string             { return p.model }
@@ -122,6 +128,9 @@ func (p *openAICompat) CreateStructuredOutputFromSchema(ctx context.Context, use
 // CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
 // multimodal user turn (text + base64 images).
 func (p *openAICompat) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	if err := checkPartsFiles(parts, openaiAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	ctx = withReportedUsage(ctx)
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
@@ -205,6 +214,9 @@ func (p *openAICompat) CreateStructuredOutputFromParts(ctx context.Context, part
 }
 
 func (p *openAICompat) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	if err := checkFileParts(messages, openaiAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
@@ -240,6 +252,8 @@ func (p *openAICompat) Chat(ctx context.Context, messages []Message, tools []Too
 								URL: "data:" + v.MediaType + ";base64," + v.Data,
 							},
 						})
+					case FilePart:
+						parts = append(parts, openaiFileChatPart(v))
 					case TextPart:
 						parts = append(parts, openai.ChatMessagePart{
 							Type: openai.ChatMessagePartTypeText,
@@ -354,6 +368,9 @@ func (p *openAICompat) Chat(ctx context.Context, messages []Message, tools []Too
 }
 
 func (p *openAICompat) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	if err := checkFileParts(messages, openaiAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
@@ -375,6 +392,8 @@ func (p *openAICompat) ChatStream(ctx context.Context, messages []Message, tools
 					switch v := p.(type) {
 					case ImagePart:
 						parts = append(parts, openai.ChatMessagePart{Type: openai.ChatMessagePartTypeImageURL, ImageURL: &openai.ChatMessageImageURL{URL: "data:" + v.MediaType + ";base64," + v.Data}})
+					case FilePart:
+						parts = append(parts, openaiFileChatPart(v))
 					case TextPart:
 						parts = append(parts, openai.ChatMessagePart{Type: openai.ChatMessagePartTypeText, Text: v.Text})
 					}

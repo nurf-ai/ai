@@ -52,6 +52,7 @@ Multi-provider, multi-modal Go AI library with realistic per-model cost tracking
 | `provider.go` | Provider registry, `NewLLMProvider` factory |
 | `types.go` | `Message`, `Tool`, `Response`, shared types |
 | `parts.go` | `StructuredOutputFromParts`, `MultimodalStructuredProvider`, multimodal helpers |
+| `files.go` | `FilePart` support: `AcceptsFile`, `FileAcceptor`, `ErrFileUnsupported`, `ErrFileTooLarge`, per-provider media-type checks, OpenAI `file` / `input_audio` wire rewrite |
 | `stream.go` | `Stream`, `StreamWithChan`, `StreamChunk`, `StreamResult`, `StreamingProvider` |
 | `stream_openai.go` | OpenAI SSE streaming loop (internal) |
 | `stream_partial.go` | Usage of a stream cut short (stopped, cancelled, dropped): marked `partial`, estimated where the provider sent no counts |

@@ -34,6 +34,9 @@ func StructuredOutputFromParts(ctx context.Context, p LLMProvider, parts []Part,
 	if hasImage {
 		return nil, ErrVisionUnsupported
 	}
+	if PartsHaveFile(parts) {
+		return nil, ErrFileUnsupported
+	}
 	return p.CreateStructuredOutputFromSchema(ctx, text, sysPrompt, schema)
 }
 

@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -41,6 +42,12 @@ func NewAnthropicProvider(apiKey, model string) *AnthropicProvider {
 		client: client,
 		model:  model,
 	}
+}
+
+// AcceptsFile reports whether a FilePart of mediaType is sent natively:
+// application/pdf only.
+func (p *AnthropicProvider) AcceptsFile(mediaType string) bool {
+	return anthropicAcceptsFile(mediaType)
 }
 
 func (p *AnthropicProvider) Name() string {
@@ -154,6 +161,9 @@ func (p *AnthropicProvider) CreateStructuredOutputFromSchema(ctx context.Context
 // multimodal user turn (text + base64 images). Honours WithMaxTokens
 // (default 4096): a vision-authored spec routinely needs more.
 func (p *AnthropicProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	if err := checkPartsFiles(parts, anthropicAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
 		return nil, err
@@ -244,6 +254,8 @@ func anthropicPartBlocks(parts []Part) []anthropic.ContentBlockParamUnion {
 		switch v := p.(type) {
 		case ImagePart:
 			blocks = append(blocks, anthropic.NewImageBlockBase64(v.MediaType, v.Data))
+		case FilePart:
+			blocks = append(blocks, anthropicDocumentBlock(v))
 		case TextPart:
 			blocks = append(blocks, anthropic.NewTextBlock(v.Text))
 		}
@@ -255,6 +267,9 @@ func anthropicPartBlocks(parts []Part) []anthropic.ContentBlockParamUnion {
 }
 
 func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	if err := checkFileParts(messages, anthropicAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -286,6 +301,8 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 					switch v := p.(type) {
 					case ImagePart:
 						blocks = append(blocks, anthropic.NewImageBlockBase64(v.MediaType, v.Data))
+					case FilePart:
+						blocks = append(blocks, anthropicDocumentBlock(v))
 					case TextPart:
 						blocks = append(blocks, anthropic.NewTextBlock(v.Text))
 					}
@@ -672,6 +689,9 @@ func (p *AnthropicProvider) emitUsage(ctx context.Context, msg *anthropic.Messag
 }
 
 func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	if err := checkFileParts(messages, anthropicAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	for _, m := range messages {
 		if m.Role == RoleUser {
 			if err := checkModeration(ctx, p.moderation, m.Content); err != nil {
@@ -698,6 +718,8 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 					switch v := p.(type) {
 					case ImagePart:
 						blocks = append(blocks, anthropic.NewImageBlockBase64(v.MediaType, v.Data))
+					case FilePart:
+						blocks = append(blocks, anthropicDocumentBlock(v))
 					case TextPart:
 						blocks = append(blocks, anthropic.NewTextBlock(v.Text))
 					}
@@ -973,4 +995,14 @@ func cacheAnthropicMessage(m Message, messages []anthropic.MessageParam) {
 	case b.OfToolResult != nil:
 		b.OfToolResult.CacheControl = c
 	}
+}
+
+// anthropicDocumentBlock is the document block for a FilePart already checked
+// with anthropicAcceptsFile.
+func anthropicDocumentBlock(v FilePart) anthropic.ContentBlockParamUnion {
+	b := anthropic.NewDocumentBlock(anthropic.Base64PDFSourceParam{Data: base64.StdEncoding.EncodeToString(v.Data)})
+	if v.Name != "" && b.OfDocument != nil {
+		b.OfDocument.Title = anthropic.String(v.Name)
+	}
+	return b
 }

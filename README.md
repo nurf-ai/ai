@@ -73,6 +73,27 @@ ctx = ai.WithMaxTokens(ctx, 16000)
 out, err := ai.StructuredOutputFromParts(ctx, llm, parts, sysPrompt, schemaJSON) // map[string]any
 ```
 
+### File parts (PDF, audio, video)
+
+`ai.Part` is one of `ai.TextPart`, `ai.ImagePart` or `ai.FilePart{MediaType, Data []byte, Name}`. Ask before sending: `ai.AcceptsFile(llm, mediaType)` (or `AcceptsFile` on a provider). A provider that cannot take a file returns `ai.ErrFileUnsupported`, never a silent drop; Gemini returns `ai.ErrFileTooLarge` when the files of a request pass its 20 MiB inline limit.
+
+| Provider | `application/pdf` | `audio/wav` | `audio/mpeg` | other `audio/*` | `video/mp4` |
+|----------|:--:|:--:|:--:|:--:|:--:|
+| Anthropic (document block) | yes | no | no | no | no |
+| OpenAI, OpenRouter, Hugging Face (`file` / `input_audio`) | yes | yes | yes | no | no |
+| Gemini (inline blob) | yes | yes | yes | yes | yes |
+| Ollama | no | no | no | no | no |
+
+```go
+if ai.AcceptsFile(llm, "application/pdf") {
+    msgs := []ai.Message{{Role: ai.RoleUser, Parts: []ai.Part{
+        ai.FilePart{MediaType: "application/pdf", Data: pdf, Name: "report.pdf"},
+        ai.TextPart{Text: "Summarize this report."},
+    }}}
+    resp, err := llm.Chat(ctx, msgs, nil)
+}
+```
+
 ### Embeddings
 
 ```go

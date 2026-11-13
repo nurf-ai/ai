@@ -55,6 +55,7 @@ func NewOpenAIProviderWithBaseURL(apiKey, model, baseURL string) *OpenAIProvider
 func newOpenAIProvider(cfg openai.ClientConfig, model string) *OpenAIProvider {
 	// reads the cache writes the client's Usage type drops (reported_cost.go)
 	cfg.HTTPClient = &http.Client{Transport: reportedUsageTransport{}}
+	cfg = withFilePartTransport(cfg)
 	raw := openai.NewClientWithConfig(cfg)
 	client := instructor.FromOpenAI(
 		raw,
@@ -68,8 +69,13 @@ func newOpenAIProvider(cfg openai.ClientConfig, model string) *OpenAIProvider {
 	}
 }
 
-func (p *OpenAIProvider) Name() string              { return "OpenAI" }
-func (p *OpenAIProvider) Model() string             { return p.model }
+func (p *OpenAIProvider) Name() string  { return "OpenAI" }
+func (p *OpenAIProvider) Model() string { return p.model }
+
+// AcceptsFile reports whether a FilePart of mediaType is sent natively:
+// application/pdf, audio/wav and audio/mpeg.
+func (p *OpenAIProvider) AcceptsFile(mediaType string) bool { return openaiAcceptsFile(mediaType) }
+
 func (p *OpenAIProvider) RawClient() *openai.Client { return p.raw }
 
 // isReasoningModel reports the o-series and GPT 5 onwards (gpt-5.6-luna,
@@ -198,6 +204,9 @@ func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 // (default 4096) and forces the structured_output tool so the model cannot
 // answer in prose.
 func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
+	if err := checkPartsFiles(parts, openaiAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	ctx = withReportedUsage(ctx)
 	userText, _ := PartsText(parts)
 	if err := checkModeration(ctx, p.moderation, userText); err != nil {
@@ -284,7 +293,7 @@ func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 // all-text MultiContent array.
 func openaiUserMessageFromParts(parts []Part) openai.ChatCompletionMessage {
 	text, hasImage := PartsText(parts)
-	if !hasImage {
+	if !hasImage && !PartsHaveFile(parts) {
 		return openai.ChatCompletionMessage{Role: openai.ChatMessageRoleUser, Content: text}
 	}
 	mc := make([]openai.ChatMessagePart, 0, len(parts))
@@ -295,6 +304,8 @@ func openaiUserMessageFromParts(parts []Part) openai.ChatCompletionMessage {
 				Type:     openai.ChatMessagePartTypeImageURL,
 				ImageURL: &openai.ChatMessageImageURL{URL: "data:" + v.MediaType + ";base64," + v.Data},
 			})
+		case FilePart:
+			mc = append(mc, openaiFileChatPart(v))
 		case TextPart:
 			mc = append(mc, openai.ChatMessagePart{Type: openai.ChatMessagePartTypeText, Text: v.Text})
 		}
@@ -303,6 +314,9 @@ func openaiUserMessageFromParts(parts []Part) openai.ChatCompletionMessage {
 }
 
 func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []Tool) (*Response, error) {
+	if err := checkFileParts(messages, openaiAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
@@ -338,6 +352,8 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []T
 								URL: "data:" + v.MediaType + ";base64," + v.Data,
 							},
 						})
+					case FilePart:
+						parts = append(parts, openaiFileChatPart(v))
 					case TextPart:
 						parts = append(parts, openai.ChatMessagePart{
 							Type: openai.ChatMessagePartTypeText,
@@ -511,6 +527,9 @@ func (p *OpenAIProvider) emitEmbeddingUsage(ctx context.Context, texts []string,
 func (p *OpenAIProvider) EmbedDimensions() int { return defaultEmbeddingDims }
 
 func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, tools []Tool, cb func(StreamChunk) error) (*Response, error) {
+	if err := checkFileParts(messages, openaiAcceptsFile, 0); err != nil {
+		return nil, err
+	}
 	ctx = withReportedUsage(ctx)
 	for _, m := range messages {
 		if m.Role == RoleUser {
@@ -532,6 +551,8 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 					switch v := p.(type) {
 					case ImagePart:
 						parts = append(parts, openai.ChatMessagePart{Type: openai.ChatMessagePartTypeImageURL, ImageURL: &openai.ChatMessageImageURL{URL: "data:" + v.MediaType + ";base64," + v.Data}})
+					case FilePart:
+						parts = append(parts, openaiFileChatPart(v))
 					case TextPart:
 						parts = append(parts, openai.ChatMessagePart{Type: openai.ChatMessagePartTypeText, Text: v.Text})
 					}

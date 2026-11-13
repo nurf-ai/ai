@@ -5,7 +5,9 @@
 package ai
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -35,8 +37,8 @@ type ToolCall struct {
 	ThoughtSignature []byte `json:"thought_signature,omitempty"`
 }
 
-// Part is a single element of a multimodal message. Sealed — only TextPart
-// and ImagePart satisfy this interface.
+// Part is a single element of a multimodal message. Sealed — only TextPart,
+// ImagePart and FilePart satisfy this interface.
 type Part interface {
 	partKind() string
 }
@@ -56,6 +58,17 @@ type ImagePart struct {
 
 func (ImagePart) partKind() string { return "image" }
 
+// FilePart carries a document, audio clip or video as raw bytes. Which media
+// types a model takes natively differs per provider: ask AcceptsFile before
+// sending. A provider that cannot take the part returns ErrFileUnsupported.
+type FilePart struct {
+	MediaType string // e.g. "application/pdf", "audio/wav", "video/mp4"
+	Data      []byte // raw bytes (base64 on the JSON wire)
+	Name      string // optional file name, e.g. "report.pdf"
+}
+
+func (FilePart) partKind() string { return "file" }
+
 // partWire is the JSON shape for []Part on the wire (backwards-compat with
 // the old ContentPart struct).
 type partWire struct {
@@ -63,6 +76,7 @@ type partWire struct {
 	Text      string `json:"text,omitempty"`
 	MediaType string `json:"media_type,omitempty"`
 	Data      string `json:"data,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
 
 // CacheControl tells a provider to mark this message (or its last
@@ -106,6 +120,8 @@ func (m Message) MarshalJSON() ([]byte, error) {
 			w.Parts = append(w.Parts, partWire{Type: "text", Text: v.Text})
 		case ImagePart:
 			w.Parts = append(w.Parts, partWire{Type: "image", MediaType: v.MediaType, Data: v.Data})
+		case FilePart:
+			w.Parts = append(w.Parts, partWire{Type: "file", MediaType: v.MediaType, Data: base64.StdEncoding.EncodeToString(v.Data), Name: v.Name})
 		}
 	}
 	return json.Marshal(w)
@@ -126,6 +142,12 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 		switch pw.Type {
 		case "image":
 			m.Parts = append(m.Parts, ImagePart{MediaType: pw.MediaType, Data: pw.Data})
+		case "file":
+			data, err := base64.StdEncoding.DecodeString(pw.Data)
+			if err != nil {
+				return fmt.Errorf("ai: file part data is not base64: %w", err)
+			}
+			m.Parts = append(m.Parts, FilePart{MediaType: pw.MediaType, Data: data, Name: pw.Name})
 		default:
 			m.Parts = append(m.Parts, TextPart{Text: pw.Text})
 		}
