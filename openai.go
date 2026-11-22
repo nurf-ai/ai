@@ -25,6 +25,11 @@ type OpenAIProvider struct {
 	// with reasoning_effort on /v1/chat/completions (reasoning models): tool
 	// calls and structured output then go out with reasoning_effort "none".
 	toolsNoReasoning bool
+	// structuredByFormat is set after the API refuses reasoning_effort "none"
+	// (gpt-6.1-sol: low, medium, high, xhigh only). Such a model, which also
+	// refuses function tools with reasoning on, gets structured output through
+	// response_format json_schema instead of a forced tool.
+	structuredByFormat bool
 }
 
 func (p *OpenAIProvider) WithModeration(m ModerationProvider) *OpenAIProvider {
@@ -202,7 +207,8 @@ func (p *OpenAIProvider) CreateStructuredOutputFromSchema(ctx context.Context, u
 // CreateStructuredOutputFromParts is CreateStructuredOutputFromSchema with a
 // multimodal user turn (text + base64 images). Honours WithMaxTokens
 // (default 4096) and forces the structured_output tool so the model cannot
-// answer in prose.
+// answer in prose; a model with no "none" reasoning level gets a json_schema
+// response_format instead (structuredByFormat).
 func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, parts []Part, sysPrompt string, schema json.RawMessage) (map[string]any, error) {
 	if err := checkPartsFiles(parts, openaiAcceptsFile, 0); err != nil {
 		return nil, err
@@ -226,26 +232,17 @@ func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 	}
 	msgs = append(msgs, openaiUserMessageFromParts(parts))
 	req := openai.ChatCompletionRequest{
-		Model:    p.model,
-		Messages: msgs,
-		Tools: []openai.Tool{
-			{
-				Type: openai.ToolTypeFunction,
-				Function: &openai.FunctionDefinition{
-					Name:        "structured_output",
-					Description: "Generate structured output matching the schema",
-					Parameters:  schemaObj,
-				},
-			},
-		},
-		ToolChoice: openai.ToolChoice{
-			Type:     openai.ToolTypeFunction,
-			Function: openai.ToolFunction{Name: "structured_output"},
-		},
+		Model:               p.model,
+		Messages:            msgs,
 		MaxCompletionTokens: maxOut,
 	}
-	if isReasoningModel(p.model) || p.toolsNoReasoning {
-		req.ReasoningEffort = "none"
+	if p.structuredByFormat {
+		setStructuredFormat(&req, schema)
+	} else {
+		setStructuredTool(&req, schemaObj)
+		if isReasoningModel(p.model) || p.toolsNoReasoning {
+			req.ReasoningEffort = "none"
+		}
 	}
 
 	completion, err := p.raw.CreateChatCompletion(ctx, req)
@@ -253,6 +250,12 @@ func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 		// a reasoning model isReasoningModel does not know yet: once, then sticky
 		p.toolsNoReasoning = true
 		req.ReasoningEffort = "none"
+		completion, err = p.raw.CreateChatCompletion(ctx, req)
+	}
+	if err != nil && reasoningNoneRejected(err, req.ReasoningEffort) {
+		// no "none" level, so no forced tool either: json_schema, once, then sticky
+		p.structuredByFormat = true
+		setStructuredFormat(&req, schema)
 		completion, err = p.raw.CreateChatCompletion(ctx, req)
 	}
 	if err != nil {
@@ -271,6 +274,17 @@ func (p *OpenAIProvider) CreateStructuredOutputFromParts(ctx context.Context, pa
 	if choice.FinishReason == openai.FinishReasonContentFilter {
 		// also fires when the model starts reproducing well-known text verbatim (regurgitation guard)
 		return nil, fmt.Errorf("structured output stopped by the provider content filter after %d tokens (finish_reason=content_filter): ask for paraphrases instead of verbatim quotes", completion.Usage.CompletionTokens)
+	}
+	if req.ResponseFormat != nil {
+		if choice.Message.Refusal != "" {
+			return nil, fmt.Errorf("openai refused structured output: %s", choice.Message.Refusal)
+		}
+		var result map[string]any
+		if err := json.Unmarshal([]byte(choice.Message.Content), &result); err != nil {
+			return nil, fmt.Errorf("unmarshal json_schema content (finish_reason=%s, content_len=%d, completion_tokens=%d): %w",
+				choice.FinishReason, len(choice.Message.Content), completion.Usage.CompletionTokens, err)
+		}
+		return result, nil
 	}
 	for _, tc := range choice.Message.ToolCalls {
 		if tc.Function.Name == "structured_output" {
@@ -621,4 +635,48 @@ func toolsRejectReasoning(err error, hasTools bool, effort string) bool {
 	}
 	msg := strings.ToLower(apiErr.Message)
 	return strings.Contains(msg, "reasoning_effort") && strings.Contains(msg, "tool")
+}
+
+// setStructuredTool asks for structured output as a forced structured_output
+// function call.
+func setStructuredTool(req *openai.ChatCompletionRequest, schemaObj map[string]any) {
+	req.Tools = []openai.Tool{{
+		Type: openai.ToolTypeFunction,
+		Function: &openai.FunctionDefinition{
+			Name:        "structured_output",
+			Description: "Generate structured output matching the schema",
+			Parameters:  schemaObj,
+		},
+	}}
+	req.ToolChoice = openai.ToolChoice{Type: openai.ToolTypeFunction, Function: openai.ToolFunction{Name: "structured_output"}}
+}
+
+// setStructuredFormat asks for structured output as message content through
+// response_format json_schema: no tools, so any reasoning level is allowed
+// ("low", the least a model without "none" takes). Not strict: strict mode
+// refuses schemas without additionalProperties false and every key required.
+func setStructuredFormat(req *openai.ChatCompletionRequest, schema json.RawMessage) {
+	req.Tools, req.ToolChoice = nil, nil
+	req.ResponseFormat = &openai.ChatCompletionResponseFormat{
+		Type:       openai.ChatCompletionResponseFormatTypeJSONSchema,
+		JSONSchema: &openai.ChatCompletionResponseFormatJSONSchema{Name: "structured_output", Schema: schema},
+	}
+	req.ReasoningEffort = "low"
+}
+
+// reasoningNoneRejected recognises the 400 a model returns when it has no
+// "none" reasoning level ("Unsupported value: 'reasoning_effort' does not
+// support 'none' with this model. Supported values are: 'low', …"). Nothing
+// was sent to the model, so a retry is safe.
+func reasoningNoneRejected(err error, effort string) bool {
+	if err == nil || effort != "none" {
+		return false
+	}
+	var apiErr *openai.APIError
+	if !errors.As(err, &apiErr) || apiErr.HTTPStatusCode != 400 {
+		return false
+	}
+	msg := strings.ToLower(apiErr.Message)
+	// not the tools refusal, which asks for 'none' ("set reasoning_effort to 'none'")
+	return strings.Contains(msg, "reasoning_effort") && strings.Contains(msg, "support 'none'")
 }

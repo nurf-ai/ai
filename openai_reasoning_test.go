@@ -128,3 +128,62 @@ func TestToolsRejectReasoning(t *testing.T) {
 		t.Fatal("non-API / nil error")
 	}
 }
+
+// gpt-6.1-sol has no "none" reasoning level and refuses function tools with
+// reasoning on, so a forced tool cannot work on chat completions. Structured
+// output must switch to response_format json_schema once, then stick.
+func TestOpenAIStructuredOutput_NoneRefusedUsesJSONSchema(t *testing.T) {
+	var reqs []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req map[string]any
+		_ = json.Unmarshal(body, &req)
+		reqs = append(reqs, req)
+		_, hasTools := req["tools"]
+		switch {
+		case req["reasoning_effort"] == "none":
+			w.WriteHeader(400)
+			_, _ = w.Write([]byte(`{"error":{"message":"Unsupported value: 'reasoning_effort' does not support 'none' with this model. Supported values are: 'low', 'medium', 'high', and 'xhigh'.","type":"invalid_request_error","param":"reasoning_effort"}}`))
+			return
+		case hasTools:
+			w.WriteHeader(400)
+			_, _ = w.Write([]byte(`{"error":{"message":"Function tools with reasoning_effort are not supported for gpt-6.1-sol in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.","type":"invalid_request_error"}}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"x","object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"{\"title\":\"Pong\"}"}}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`))
+	}))
+	defer srv.Close()
+	schema := json.RawMessage(`{"type":"object","properties":{"title":{"type":"string"}}}`)
+
+	p := NewOpenAIProviderWithBaseURL("k", "gpt-6.1-sol", srv.URL)
+	for i := range 2 {
+		out, err := p.CreateStructuredOutputFromSchema(context.Background(), "a pong game", "sys", schema)
+		if err != nil || out["title"] != "Pong" {
+			t.Fatalf("call %d: out=%v err=%v", i, out, err)
+		}
+	}
+	if len(reqs) != 3 {
+		t.Fatalf("%d requests, want 3 (400 on none, json_schema retry, then json_schema sticky)", len(reqs))
+	}
+	for _, req := range reqs[1:] {
+		rf, _ := req["response_format"].(map[string]any)
+		if _, hasTools := req["tools"]; hasTools || rf["type"] != "json_schema" || req["reasoning_effort"] != "low" {
+			t.Fatalf("retry request = %v, want json_schema, low, no tools", req)
+		}
+	}
+}
+
+func TestReasoningNoneRejected(t *testing.T) {
+	msg := &openai.APIError{HTTPStatusCode: 400, Message: "Unsupported value: 'reasoning_effort' does not support 'none' with this model. Supported values are: 'low', 'medium', 'high', and 'xhigh'."}
+	if !reasoningNoneRejected(msg, "none") {
+		t.Fatal("none refusal not recognised")
+	}
+	if reasoningNoneRejected(msg, "low") || reasoningNoneRejected(nil, "none") {
+		t.Fatal("only a refused none counts")
+	}
+	tools := &openai.APIError{HTTPStatusCode: 400, Message: "Function tools with reasoning_effort are not supported for gpt-5.6-luna. Set reasoning_effort to 'none'."}
+	if reasoningNoneRejected(tools, "none") {
+		t.Fatal("the tools refusal (asks for none) must not read as none refused")
+	}
+}
