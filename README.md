@@ -359,7 +359,7 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | fal | `ltx-2.3/i2v/fast` | | | | | | | | | | | | | | | | | | | | ✓ | |
 | fal | `flux/schnell` | | | | | | | | | | | | | | | | ✓ | | | | | |
 | fal | `minimax/h3-max/i2v` | | | | | | | | | | | | | | | | | | | | ✓ | |
-| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | | — | — | |
+| MiniMax | `MiniMax-H3` | | | | | | | | | | | | | | | | | | | ✓ | ✓ | |
 
 <!-- testmatrix:end -->
 
