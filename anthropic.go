@@ -392,13 +392,7 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 		Model:     anthropic.Model(p.model),
 		Messages:  apiMessages,
 	}
-	if effort := ReasoningEffortFromCtx(ctx); effort != "" {
-		budget := anthropicThinkingBudget(effort)
-		if budget > params.MaxTokens {
-			params.MaxTokens = budget + params.MaxTokens
-		}
-		params.Thinking = anthropic.ThinkingConfigParamOfEnabled(budget)
-	}
+	setAnthropicReasoning(&params, p.model, ReasoningEffortFromCtx(ctx))
 	if len(sysBlocks) > 0 {
 		// Honor ai.WithCacheSysPrompt by marking the LAST sys block as the
 		// cacheable prefix boundary (Anthropic caches everything up through
@@ -468,6 +462,64 @@ func (p *AnthropicProvider) Chat(ctx context.Context, messages []Message, tools 
 }
 
 // anthropicThinkingBudget maps a reasoning effort level to a thinking budget in tokens.
+// setAnthropicReasoning turns a reasoning effort into the thinking config the
+// model accepts. Claude 4.6 and later think adaptively, steered by
+// output_config.effort, and the newest of them reject a fixed budget
+// (thinking.type "enabled") with a 400; older models only take the budget.
+func setAnthropicReasoning(params *anthropic.MessageNewParams, model, effort string) {
+	if effort == "" {
+		return
+	}
+	if !anthropicBudgetThinking(model) {
+		params.Thinking = anthropic.ThinkingConfigParamUnion{OfAdaptive: &anthropic.ThinkingConfigAdaptiveParam{}}
+		params.OutputConfig.Effort = anthropicEffort(effort)
+		return
+	}
+	budget := anthropicThinkingBudget(effort)
+	if budget > params.MaxTokens {
+		params.MaxTokens = budget + params.MaxTokens
+	}
+	params.Thinking = anthropic.ThinkingConfigParamOfEnabled(budget)
+}
+
+// anthropicBudgetThinking reports whether model predates adaptive thinking
+// (Claude 3.x and the Claude 4 releases up to 4.5), which takes thinking as a
+// token budget. Unknown and newer models get adaptive thinking.
+func anthropicBudgetThinking(model string) bool {
+	m := strings.ToLower(model)
+	if i := strings.Index(m, "claude-"); i >= 0 {
+		m = m[i:] // provider prefixes such as "anthropic." or "us.anthropic."
+	}
+	for _, legacy := range []string{
+		"claude-3",
+		"claude-opus-4-0", "claude-opus-4-1", "claude-opus-4-5", "claude-opus-4-2025",
+		"claude-sonnet-4-0", "claude-sonnet-4-5", "claude-sonnet-4-2025",
+		"claude-haiku-4-5",
+	} {
+		if strings.HasPrefix(m, legacy) {
+			return true
+		}
+	}
+	return false
+}
+
+// anthropicEffort maps a reasoning effort onto output_config.effort, whose
+// lowest level is "low".
+func anthropicEffort(effort string) anthropic.OutputConfigEffort {
+	switch effort {
+	case "minimal", "low":
+		return anthropic.OutputConfigEffortLow
+	case "high":
+		return anthropic.OutputConfigEffortHigh
+	case "xhigh":
+		return anthropic.OutputConfigEffortXhigh
+	case "max":
+		return anthropic.OutputConfigEffortMax
+	default:
+		return anthropic.OutputConfigEffortMedium
+	}
+}
+
 func anthropicThinkingBudget(effort string) int64 {
 	switch effort {
 	case "low":
@@ -796,13 +848,7 @@ func (p *AnthropicProvider) ChatStream(ctx context.Context, messages []Message, 
 		Model:     anthropic.Model(p.model),
 		Messages:  apiMessages,
 	}
-	if effort := ReasoningEffortFromCtx(ctx); effort != "" {
-		budget := anthropicThinkingBudget(effort)
-		if budget > params.MaxTokens {
-			params.MaxTokens = budget + params.MaxTokens
-		}
-		params.Thinking = anthropic.ThinkingConfigParamOfEnabled(budget)
-	}
+	setAnthropicReasoning(&params, p.model, ReasoningEffortFromCtx(ctx))
 	if len(sysBlocks) > 0 {
 		if CacheSysPromptFromCtx(ctx) {
 			sysBlocks[len(sysBlocks)-1].CacheControl = anthropic.NewCacheControlEphemeralParam()
