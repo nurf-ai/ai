@@ -17,8 +17,10 @@ const (
 	DefaultMinimaxVideoModel = "MiniMax-H3"
 	minimaxVideoSubmitURL    = "https://api.minimax.io/v2/video_generation"
 	minimaxVideoQueryURL     = "https://api.minimax.io/v2/query/video_generation"
-	minimaxPollInterval      = 10 * time.Second
 )
+
+// minimaxPollInterval is a var so tests can shorten it.
+var minimaxPollInterval = 10 * time.Second
 
 type MinimaxVideoProvider struct {
 	apiKey     string
@@ -75,6 +77,12 @@ type minimaxTask struct {
 	TaskID  string              `json:"task_id"`
 	Status  string              `json:"status"`
 	Content *minimaxTaskContent `json:"content,omitempty"`
+	Error   *minimaxTaskError   `json:"error,omitempty"`
+}
+
+type minimaxTaskError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type minimaxTaskContent struct {
@@ -225,6 +233,9 @@ func (p *MinimaxVideoProvider) poll(ctx context.Context, taskID string) (string,
 			}
 			return qr.Task.Content.URL, nil
 		case "failed", "cancelled":
+			if e := qr.Task.Error; e != nil && e.Message != "" {
+				return "", fmt.Errorf("minimax video: task %s %s: %s (code %s)", taskID, qr.Task.Status, e.Message, e.Code)
+			}
 			return "", fmt.Errorf("minimax video: task %s: %s", taskID, qr.Task.Status)
 		default:
 			logger.Debug("minimax video poll", zap.String("task_id", taskID), zap.String("status", qr.Task.Status))

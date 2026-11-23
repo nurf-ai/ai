@@ -1582,7 +1582,7 @@ func TestMinimaxVideo_Integration(t *testing.T) {
 		p.SetMeter(newCostTracker(t))
 		res, err := p.Generate(ctx, VideoRequest{
 			Prompt:     "the blue square begins spinning faster",
-			Image:      testPNGBytes(t),
+			Image:      testPNGBytesSize(t, 256, 256), // MiniMax: each side in [256, 5760]
 			Duration:   5,
 			Resolution: "768P",
 		})
