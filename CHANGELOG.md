@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/nurf-ai/ai/compare/v0.21.0...v0.21.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **openai:** structured output via json_schema when a model has no 'none' reasoning ([b5c22d1](https://github.com/nurf-ai/ai/commit/b5c22d1659b8f2267fc9664bbd6c847735980b47))
+
 ## [0.21.0](https://github.com/nurf-ai/ai/compare/v0.20.1...v0.21.0) (2026-11-13)
 
 
