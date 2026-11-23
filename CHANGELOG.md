@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.3](https://github.com/nurf-ai/ai/compare/v0.21.2...v0.21.3) (2026-11-23)
+
+
+### Bug Fixes
+
+* **anthropic:** adaptive thinking with an effort on Claude 4.6 and later ([50dc85d](https://github.com/nurf-ai/ai/commit/50dc85dcafa0e00da0d47d53b1439f757218ec5f))
+
 ## [0.21.2](https://github.com/nurf-ai/ai/compare/v0.21.1...v0.21.2) (2026-11-23)
 
 
