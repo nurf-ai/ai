@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.21.2](https://github.com/nurf-ai/ai/compare/v0.21.1...v0.21.2) (2026-11-23)
+
+
+### Bug Fixes
+
+* **minimax:** surface task error reason on failed video tasks ([1a486e5](https://github.com/nurf-ai/ai/commit/1a486e5309590cc2a576f5583a17aca9b2ab2d80))
+* **openai:** default image model to gpt-image-2 ([d09722f](https://github.com/nurf-ai/ai/commit/d09722f7e5ccc6919b776058f121ac82d4afdd39))
+* **openai:** meter gpt-image calls from reported token usage ([35be1a8](https://github.com/nurf-ai/ai/commit/35be1a89a88d36be858d6ace447152f2df6b23bf))
+
 ## [0.21.1](https://github.com/nurf-ai/ai/compare/v0.21.0...v0.21.1) (2026-11-23)
 
 
