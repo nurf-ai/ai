@@ -508,6 +508,7 @@ func TestOpenAI_Integration(t *testing.T) {
 	t.Run("ImageGenerate", func(t *testing.T) {
 		t.Parallel()
 		img := newOpenAIImageProvider(key, "")
+		img.SetMeter(newCostTracker(t))
 		b64, err := img.Generate(ctx, "a solid blue square", "", "")
 		if err != nil {
 			t.Fatalf("image generate: %v", err)
@@ -521,6 +522,7 @@ func TestOpenAI_Integration(t *testing.T) {
 	t.Run("ImageEdit", func(t *testing.T) {
 		t.Parallel()
 		img := newOpenAIImageProvider(key, "")
+		img.SetMeter(newCostTracker(t))
 		b64, err := img.Edit(ctx, testPNGBytes(t), "add a small red circle in the center")
 		if err != nil {
 			t.Fatalf("image edit: %v", err)

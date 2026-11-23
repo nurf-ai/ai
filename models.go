@@ -36,8 +36,11 @@ type modelPricing struct {
 	MaxInputTokens             int64              `json:"max_input_tokens,omitempty"`
 	PerVideoSecond             float64            `json:"per_video_second,omitempty"`
 	PerVideoSecondByResolution map[string]float64 `json:"per_video_second_by_resolution,omitempty"`
-	ImageOutputPerMillion      float64            `json:"image_output_per_million,omitempty"`
-	VideoOutputPerMillion      float64            `json:"video_output_per_million,omitempty"`
+	// ImageInputPerMillion prices input image tokens (image edits) when
+	// they bill differently from text input; 0 = InputPerMillion.
+	ImageInputPerMillion  float64 `json:"image_input_per_million,omitempty"`
+	ImageOutputPerMillion float64 `json:"image_output_per_million,omitempty"`
+	VideoOutputPerMillion float64 `json:"video_output_per_million,omitempty"`
 	// TTSPerMillionChars prices text-to-speech by input character; the
 	// speech endpoint returns no usage, so characters are the only signal.
 	TTSPerMillionChars float64 `json:"tts_per_million_chars,omitempty"`

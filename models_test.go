@@ -157,8 +157,8 @@ func TestEstimateCostFull_FlatImage(t *testing.T) {
 		model  string
 		expect float64
 	}{
-		{"gpt-image-1", 0.04},
-		{"gpt-image-2", 0.053},
+		{"gpt-image-1", 0.011},
+		{"gpt-image-2", 0.006},
 		{"gemini-2.5-flash-image", 0.039},
 	}
 	for _, tt := range tests {
@@ -192,8 +192,8 @@ func TestEstimateImageCostByTokens(t *testing.T) {
 	}
 	// with 0 tokens, falls back to flat_per_image
 	got = EstimateImageCostByTokens("gpt-image-1", 0)
-	if got != 0.04 {
-		t.Errorf("gpt-image-1 no tokens = %f, want 0.04 (flat)", got)
+	if got != 0.011 {
+		t.Errorf("gpt-image-1 no tokens = %f, want 0.011 (flat)", got)
 	}
 	// gemini image model
 	got = EstimateImageCostByTokens("gemini-2.5-flash-image", 1300)
