@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"strings"
 
 	"github.com/sashabaranov/go-openai"
 	"go.uber.org/zap"
@@ -32,7 +33,7 @@ func (p *OpenAIImageProvider) SetModeration(m ModerationProvider) { p.moderation
 
 func newOpenAIImageProvider(apiKey, model string) *OpenAIImageProvider {
 	if model == "" {
-		model = openai.CreateImageModelGptImage1
+		model = openai.CreateImageModelGptImage2
 	}
 	return &OpenAIImageProvider{raw: openai.NewClient(apiKey), apiKey: apiKey, defaultModel: model}
 }
@@ -95,8 +96,8 @@ func (p *OpenAIImageProvider) Edit(ctx context.Context, image []byte, editPrompt
 		return p.Generate(ctx, editPrompt, "", "")
 	}
 	var b64 string
-	if p.defaultModel == openai.CreateImageModelGptImage1 {
-		// gpt-image-1 rejects the response_format param that the library sends
+	if strings.HasPrefix(p.defaultModel, "gpt-image") {
+		// gpt-image-* models reject the response_format param that the library sends
 		// unconditionally, so we make a direct multipart request.
 		var err error
 		b64, err = p.editDirect(ctx, image, editPrompt)

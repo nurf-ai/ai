@@ -336,7 +336,7 @@ Each ✓ means the integration test passes, ✗ means it fails, and — means it
 | OpenAI | `gpt-4o-mini-tts` | | | | | | | | | | ✓ | | | | | | | | | | | |
 | OpenAI | `gpt-realtime-2.1-mini` | | | | | | | | | | | | | ✓ | ✓ | | | | | | | |
 | OpenAI | `omni-moderation-latest` | | | | | | | | | | | | | | | ✓ | | | | | | |
-| OpenAI | `gpt-image-1` | | | | | | | | | | | | | | | | ✓ | ✓ | | | | |
+| OpenAI | `gpt-image-2` | | | | | | | | | | | | | | | | ✓ | ✓ | | | | |
 | Typesafe | `jev-latest` | | | | | | | ✓ | | | | | | | | | | | | | | |
 | Gemini | `gemini-decision-1` | | | | | | | skip | | | | | | | | | | | | | | |
 | Gemini | `gemini-3.6-flash` | ✓ | ✓ | | ✓ | ✓ | ✓ | | | | | | | | | | | | | | | |

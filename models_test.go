@@ -158,6 +158,7 @@ func TestEstimateCostFull_FlatImage(t *testing.T) {
 		expect float64
 	}{
 		{"gpt-image-1", 0.04},
+		{"gpt-image-2", 0.053},
 		{"gemini-2.5-flash-image", 0.039},
 	}
 	for _, tt := range tests {

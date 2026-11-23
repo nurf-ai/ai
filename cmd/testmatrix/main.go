@@ -118,7 +118,7 @@ var rows = []row{
 	{provider: "OpenAI", model: "gpt-4o-mini-tts", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"TTS": true}},
 	{provider: "OpenAI", model: "gpt-realtime-2.1-mini", testPrefix: "TestRealtime_Integration", only: map[string]bool{"TextRoundtrip": true, "ToolCall": true}},
 	{provider: "OpenAI", model: "omni-moderation-latest", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"Moderation": true}},
-	{provider: "OpenAI", model: "gpt-image-1", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
+	{provider: "OpenAI", model: "gpt-image-2", testPrefix: "TestOpenAI_Integration", only: map[string]bool{"ImageGenerate": true, "ImageEdit": true}},
 	{provider: "Typesafe", model: "jev-latest", testPrefix: "TestTypesafe_Integration", only: map[string]bool{"Decisions": true}, group: map[string][]string{"Decisions": decisionsSubtests}},
 	{provider: "Gemini", model: "gemini-decision-1", testPrefix: "TestGeminiDecisions_Integration", only: map[string]bool{"Decisions": true}, group: map[string][]string{"Decisions": decisionsSubtests}},
 	{provider: "Gemini", model: "gemini-3.6-flash", testPrefix: "TestGemini_Integration", only: chatCaps},
